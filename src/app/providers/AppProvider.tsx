@@ -1,0 +1,16 @@
+import { QueryClientProvider } from '@tanstack/react-query'
+import type { PropsWithChildren } from 'react'
+import { BrowserRouter } from 'react-router-dom'
+
+import { AuthProvider } from '@/features/auth/providers/AuthProvider'
+import { queryClient } from '@/services/queryClient'
+
+export function AppProvider({ children }: PropsWithChildren) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>{children}</AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
