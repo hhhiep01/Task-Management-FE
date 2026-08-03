@@ -13,6 +13,7 @@ const navigation: NavigationItem[] = [
   { label: 'Employee', href: '/employee', roles: ['employee'] },
   { label: 'Manager', href: '/manager', roles: ['manager'] },
   { label: 'Admin', href: '/admin', roles: ['admin'] },
+  { label: 'Roles', href: '/admin/roles', roles: ['admin'] },
 ]
 
 export function AppLayout() {

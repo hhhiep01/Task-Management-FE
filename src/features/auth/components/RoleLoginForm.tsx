@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
@@ -34,6 +35,8 @@ export function RoleLoginForm({
   useDocumentTitle(`${title} | ${env.appName}`)
 
   const { isAuthenticated, login } = useAuth()
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState | null
@@ -43,15 +46,24 @@ export function RoleLoginForm({
     return <Navigate to={redirectTo} replace />
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
     const email = String(formData.get('email') ?? '')
     const password = String(formData.get('password') ?? '')
 
-    login(role, { email, password })
-    navigate(redirectTo, { replace: true })
+    try {
+      setErrorMessage('')
+      setIsSubmitting(true)
+      const loggedInUser = await login({ email, password })
+
+      navigate(redirectTo === `/${role}` ? `/${loggedInUser.role}` : redirectTo, { replace: true })
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Login failed')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -86,8 +98,14 @@ export function RoleLoginForm({
             />
           </label>
 
-          <Button type="submit" className={submitClassName}>
-            {submitLabel}
+          {errorMessage && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          )}
+
+          <Button type="submit" disabled={isSubmitting} className={submitClassName}>
+            {isSubmitting ? 'Signing in...' : submitLabel}
           </Button>
 
           {showCreateAccount && (

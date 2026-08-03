@@ -1,12 +1,18 @@
+import { Link } from 'react-router-dom'
+
 import { Card } from '@/components/ui/Card'
 import { env } from '@/config/env'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+
+import { AdminTabs } from '../components/AdminTabs'
 
 export function AdminPage() {
   useDocumentTitle(`Admin | ${env.appName}`)
 
   return (
     <section>
+      <AdminTabs />
+
       <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
         Admin page
       </p>
@@ -19,6 +25,12 @@ export function AdminPage() {
         <Card className="p-5">
           <h2 className="text-lg font-semibold text-slate-950">User permissions</h2>
           <p className="mt-2 text-slate-600">Create accounts and assign access roles.</p>
+          <Link
+            to="/admin/roles"
+            className="mt-4 inline-flex rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
+          >
+            Manage roles
+          </Link>
         </Card>
         <Card className="p-5">
           <h2 className="text-lg font-semibold text-slate-950">System settings</h2>

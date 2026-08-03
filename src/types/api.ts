@@ -1,6 +1,8 @@
 export type ApiResponse<TData> = {
-  data: TData
-  message?: string
+  statusCode: number
+  isSuccess: boolean
+  errorMessage?: string | null
+  result: TData
 }
 
 export type PaginatedResponse<TItem> = {

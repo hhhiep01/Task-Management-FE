@@ -1,6 +1,8 @@
 import axios from 'axios'
+import type { AxiosError } from 'axios'
 
 import { env } from '@/config/env'
+import type { ApiResponse } from '@/types/api'
 
 export const httpClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -19,3 +21,11 @@ httpClient.interceptors.request.use((config) => {
 
   return config
 })
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiResponse<unknown>>) => {
+    const message = error.response?.data?.errorMessage || error.message
+    return Promise.reject(new Error(message))
+  },
+)

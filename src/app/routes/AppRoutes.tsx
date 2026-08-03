@@ -10,6 +10,7 @@ import { ProtectedRoute } from '@/features/auth/routes/ProtectedRoute'
 import { RoleRedirect } from '@/features/auth/routes/RoleRedirect'
 import { EmployeePage } from '@/features/employee/pages/EmployeePage'
 import { ManagerPage } from '@/features/manager/pages/ManagerPage'
+import { RolesPage } from '@/features/roles/pages/RolesPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
 
@@ -31,6 +32,7 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route element={<AppLayout />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/roles" element={<RolesPage />} />
         </Route>
       </Route>
 

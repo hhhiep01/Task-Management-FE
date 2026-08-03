@@ -1,42 +1,29 @@
 import { useMemo, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 
+import { loginApi } from '../api/authApi'
+import { getUserFromToken } from '../utils/jwt'
 import { AuthContext } from './AuthContext'
-import type { AuthContextValue, AuthUser, LoginCredentials, LoginRole } from '../types/auth.types'
+import type { AuthContextValue, AuthUser } from '../types/auth.types'
 
 const AUTH_STORAGE_KEY = 'authUser'
-const validRoles = ['employee', 'manager', 'admin']
+const ACCESS_TOKEN_KEY = 'accessToken'
 
 function getStoredUser() {
-  const storedUser = localStorage.getItem(AUTH_STORAGE_KEY)
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY)
 
-  if (!storedUser) {
+  if (!token) {
     return null
   }
 
   try {
-    const user = JSON.parse(storedUser) as AuthUser
-
-    if (!validRoles.includes(user.role)) {
-      localStorage.removeItem(AUTH_STORAGE_KEY)
-      localStorage.removeItem('accessToken')
-      return null
-    }
-
+    const user = getUserFromToken(token)
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user))
     return user
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY)
-    localStorage.removeItem('accessToken')
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
     return null
-  }
-}
-
-function createDemoUser(role: LoginRole, credentials?: LoginCredentials): AuthUser {
-  return {
-    id: `demo-${role}`,
-    name: `${role[0].toUpperCase()}${role.slice(1)} Demo`,
-    email: credentials?.email || `${role}@taskmanagement.local`,
-    role,
   }
 }
 
@@ -47,14 +34,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      login: (role, credentials) => {
-        const demoUser = createDemoUser(role, credentials)
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoUser))
-        setUser(demoUser)
+      login: async (credentials) => {
+        const token = await loginApi(credentials)
+        const loggedInUser = getUserFromToken(token)
+
+        localStorage.setItem(ACCESS_TOKEN_KEY, token)
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedInUser))
+        setUser(loggedInUser)
+
+        return loggedInUser
       },
       logout: () => {
         localStorage.removeItem(AUTH_STORAGE_KEY)
-        localStorage.removeItem('accessToken')
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
         setUser(null)
       },
     }),

@@ -12,7 +12,7 @@ export type AuthUser = {
 export type AuthContextValue = {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (role: LoginRole, credentials?: LoginCredentials) => void
+  login: (credentials: LoginCredentials) => Promise<AuthUser>
   logout: () => void
 }
 
@@ -20,3 +20,10 @@ export type LoginCredentials = {
   email: string
   password: string
 }
+
+export type LoginRequest = {
+  userEmail: string
+  password: string
+}
+
+export type LoginResponse = string
