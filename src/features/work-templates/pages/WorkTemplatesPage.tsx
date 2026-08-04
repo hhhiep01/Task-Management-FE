@@ -178,13 +178,13 @@ export function WorkTemplatesPage() {
           </p>
         ) : templatesQuery.data?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] text-left text-sm">
+            <table className="w-full min-w-[1400px] whitespace-nowrap text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Tên công việc</th>
                   <th className="px-5 py-3 font-semibold">Nhóm công việc</th>
                   <th className="px-5 py-3 font-semibold">Loại công việc</th>
-                  <th className="px-5 py-3 font-semibold">Kết quả mong đợi</th>
+                  <th className="min-w-80 whitespace-normal px-5 py-3 font-semibold">Kết quả mong đợi</th>
                   <th className="px-5 py-3 font-semibold">Hạn chuẩn</th>
                   <th className="px-5 py-3 font-semibold">Điểm</th>
                   <th className="px-5 py-3 font-semibold">Độ khó</th>
@@ -200,7 +200,7 @@ export function WorkTemplatesPage() {
                     <td className="px-5 py-4 font-semibold text-slate-950">{template.name}</td>
                     <td className="px-5 py-4 text-slate-700">{template.workCategory.name}</td>
                     <td className="px-5 py-4 text-slate-600">{template.workType || '-'}</td>
-                    <td className="px-5 py-4 text-slate-600">{template.expectedOutput || '-'}</td>
+                    <td className="min-w-80 whitespace-normal px-5 py-4 text-slate-600">{template.expectedOutput || '-'}</td>
                     <td className="px-5 py-4 text-slate-600">{template.standardDeadline || '-'}</td>
                     <td className="px-5 py-4 text-slate-600">{template.baseScore}</td>
                     <td className="px-5 py-4 text-slate-600">{template.difficultyPercent}%</td>
