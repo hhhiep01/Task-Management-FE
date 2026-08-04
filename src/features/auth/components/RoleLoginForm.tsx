@@ -24,6 +24,16 @@ type LocationState = {
   }
 }
 
+function getLoginErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : ''
+
+  if (message === 'Email or password is wrong') {
+    return 'Email hoặc mật khẩu không đúng'
+  }
+
+  return message || 'Đăng nhập thất bại'
+}
+
 export function RoleLoginForm({
   role,
   title,
@@ -60,7 +70,7 @@ export function RoleLoginForm({
 
       navigate(redirectTo === `/${role}` ? `/${loggedInUser.role}` : redirectTo, { replace: true })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Login failed')
+      setErrorMessage(getLoginErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -88,12 +98,12 @@ export function RoleLoginForm({
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-700">Password</span>
+            <span className="text-sm font-medium text-slate-700">Mật khẩu</span>
             <input
               name="password"
               type="password"
               required
-              placeholder="Enter password"
+              placeholder="Nhập mật khẩu"
               className="rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
             />
           </label>
@@ -105,7 +115,7 @@ export function RoleLoginForm({
           )}
 
           <Button type="submit" disabled={isSubmitting} className={submitClassName}>
-            {isSubmitting ? 'Signing in...' : submitLabel}
+            {isSubmitting ? 'Đang đăng nhập...' : submitLabel}
           </Button>
 
           {showCreateAccount && (
@@ -113,20 +123,20 @@ export function RoleLoginForm({
               type="button"
               className="rounded-md border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
             >
-              Create account
+              Tạo tài khoản
             </button>
           )}
         </form>
 
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <Link to="/login/employee" className="font-medium text-cyan-700 hover:text-cyan-800">
-            Employee
+            Nhân viên
           </Link>
           <Link to="/login/manager" className="font-medium text-cyan-700 hover:text-cyan-800">
-            Manager
+            Trưởng phòng
           </Link>
           <Link to="/login/admin" className="font-medium text-cyan-700 hover:text-cyan-800">
-            Admin
+            Quản trị
           </Link>
         </div>
       </section>

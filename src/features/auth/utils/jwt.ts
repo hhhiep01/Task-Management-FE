@@ -20,6 +20,8 @@ const roleMap: Record<string, UserRole> = {
   ADMIN: 'admin',
   EMPLOYEE: 'employee',
   MANAGER: 'manager',
+  PP: 'manager',
+  TP: 'manager',
 }
 
 function decodeBase64Url(value: string) {
@@ -35,7 +37,7 @@ export function decodeJwtPayload(token: string): JwtPayload {
   const [, payload] = token.split('.')
 
   if (!payload) {
-    throw new Error('Invalid login token')
+    throw new Error('Token đăng nhập không hợp lệ')
   }
 
   return JSON.parse(decodeBase64Url(payload)) as JwtPayload
@@ -53,17 +55,17 @@ export function getUserFromToken(token: string): AuthUser {
   const payload = decodeJwtPayload(token)
 
   if (isJwtExpired(payload)) {
-    throw new Error('Login token expired')
+    throw new Error('Phiên đăng nhập đã hết hạn')
   }
 
   const role = roleMap[(payload[roleClaim] || payload.Role || '').toUpperCase()]
 
   if (!role || role === 'guest') {
-    throw new Error('Invalid user role')
+    throw new Error('Vai trò người dùng không hợp lệ')
   }
 
   const id = payload.UserId || payload[nameIdentifierClaim] || ''
-  const name = payload.FullName || payload[nameClaim] || payload.Email || 'User'
+  const name = payload.FullName || payload[nameClaim] || payload.Email || 'Người dùng'
 
   return {
     id,

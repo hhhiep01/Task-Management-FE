@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+﻿import { NavLink, Outlet } from 'react-router-dom'
 
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { UserRole } from '@/features/auth/types/auth.types'
@@ -10,10 +10,16 @@ type NavigationItem = {
 }
 
 const navigation: NavigationItem[] = [
-  { label: 'Employee', href: '/employee', roles: ['employee'] },
-  { label: 'Manager', href: '/manager', roles: ['manager'] },
-  { label: 'Admin', href: '/admin', roles: ['admin'] },
-  { label: 'Roles', href: '/admin/roles', roles: ['admin'] },
+  { label: 'Nhân viên', href: '/employee', roles: ['employee'] },
+  { label: 'Trưởng phòng', href: '/manager', roles: ['manager'] },
+  { label: 'Tài khoản', href: '/manager/accounts', roles: ['manager'] },
+  { label: 'Phòng ban', href: '/manager/organizations', roles: ['manager'] },
+  { label: 'Kỳ đánh giá', href: '/manager/evaluation-periods', roles: ['manager'] },
+  { label: 'Nhóm công việc', href: '/manager/work-categories', roles: ['manager'] },
+  { label: 'Danh mục công việc', href: '/manager/work-templates', roles: ['manager'] },
+  { label: 'Quản trị', href: '/admin', roles: ['admin'] },
+  { label: 'Tài khoản', href: '/admin/accounts', roles: ['admin'] },
+  { label: 'Vai trò', href: '/admin/roles', roles: ['admin'] },
 ]
 
 export function AppLayout() {
@@ -53,7 +59,7 @@ export function AppLayout() {
               onClick={logout}
               className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
             >
-              Logout
+              Đăng xuất
             </button>
           </div>
         </header>

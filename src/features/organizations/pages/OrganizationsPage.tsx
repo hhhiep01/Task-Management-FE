@@ -3,63 +3,70 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { AdminTabs } from '@/features/admin/components/AdminTabs'
 import { env } from '@/config/env'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatDate } from '@/utils/formatDate'
 
-import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from '../hooks/useRoles'
-import type { Role, RolePayload } from '../types/role.types'
+import {
+  useCreateOrganization,
+  useDeleteOrganization,
+  useOrganizations,
+  useUpdateOrganization,
+} from '../hooks/useOrganizations'
+import type { Organization, OrganizationPayload } from '../types/organization.types'
 
-const initialForm: RolePayload = {
+const initialForm: OrganizationPayload = {
   code: '',
   name: '',
 }
 
-export function RolesPage() {
-  useDocumentTitle(`Quản lý vai trò | ${env.appName}`)
+export function OrganizationsPage() {
+  useDocumentTitle(`Quản lý phòng ban | ${env.appName}`)
 
-  const [form, setForm] = useState<RolePayload>(initialForm)
-  const [editingRole, setEditingRole] = useState<Role | null>(null)
+  const [form, setForm] = useState<OrganizationPayload>(initialForm)
+  const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null)
   const [formError, setFormError] = useState('')
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false)
 
-  const rolesQuery = useRoles()
-  const createRoleMutation = useCreateRole()
-  const updateRoleMutation = useUpdateRole()
-  const deleteRoleMutation = useDeleteRole()
+  const organizationsQuery = useOrganizations()
+  const createOrganizationMutation = useCreateOrganization()
+  const updateOrganizationMutation = useUpdateOrganization()
+  const deleteOrganizationMutation = useDeleteOrganization()
 
-  const isSubmitting = createRoleMutation.isPending || updateRoleMutation.isPending
-  const modalTitle = editingRole ? 'Cập nhật vai trò' : 'Tạo vai trò mới'
+  const isSubmitting =
+    createOrganizationMutation.isPending || updateOrganizationMutation.isPending
+  const modalTitle = editingOrganization ? 'Cập nhật phòng ban' : 'Tạo phòng ban'
   const formApiError = useMemo(() => {
-    const error = createRoleMutation.error || updateRoleMutation.error
+    const error = createOrganizationMutation.error || updateOrganizationMutation.error
     return error instanceof Error ? error.message : ''
-  }, [createRoleMutation.error, updateRoleMutation.error])
+  }, [createOrganizationMutation.error, updateOrganizationMutation.error])
   const deleteError =
-    deleteRoleMutation.error instanceof Error ? deleteRoleMutation.error.message : ''
+    deleteOrganizationMutation.error instanceof Error
+      ? deleteOrganizationMutation.error.message
+      : ''
 
   const closeModal = () => {
     setForm(initialForm)
-    setEditingRole(null)
+    setEditingOrganization(null)
     setFormError('')
-    setIsRoleModalOpen(false)
+    setIsOrganizationModalOpen(false)
   }
 
   const openCreateModal = () => {
     setForm(initialForm)
-    setEditingRole(null)
+    setEditingOrganization(null)
     setFormError('')
-    setIsRoleModalOpen(true)
+    setIsOrganizationModalOpen(true)
   }
 
-  const openEditModal = (role: Role) => {
-    setEditingRole(role)
+  const openEditModal = (organization: Organization) => {
+    setEditingOrganization(organization)
     setForm({
-      code: role.code,
-      name: role.name,
+      code: organization.code,
+      name: organization.name,
     })
     setFormError('')
-    setIsRoleModalOpen(true)
+    setIsOrganizationModalOpen(true)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -71,54 +78,58 @@ export function RolesPage() {
     }
 
     if (!payload.code || !payload.name) {
-      setFormError('Vui lòng nhập đầy đủ mã vai trò và tên vai trò.')
+      setFormError('Vui lòng nhập đầy đủ mã phòng ban và tên phòng ban.')
       return
     }
 
     setFormError('')
 
-    if (editingRole) {
-      await updateRoleMutation.mutateAsync({ roleId: editingRole.id, payload })
+    if (editingOrganization) {
+      await updateOrganizationMutation.mutateAsync({
+        organizationId: editingOrganization.id,
+        payload,
+      })
     } else {
-      await createRoleMutation.mutateAsync(payload)
+      await createOrganizationMutation.mutateAsync(payload)
     }
 
     closeModal()
   }
 
-  const handleDelete = async (role: Role) => {
-    const confirmed = window.confirm(`Xóa vai trò "${role.name}"?`)
+  const handleDelete = async (organization: Organization) => {
+    const confirmed = window.confirm(`Xóa phòng ban "${organization.name}"?`)
 
     if (!confirmed) {
       return
     }
 
-    await deleteRoleMutation.mutateAsync(role.id)
+    await deleteOrganizationMutation.mutateAsync(organization.id)
   }
 
   return (
     <section>
-      <AdminTabs />
-
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
-            Vai trò
+            Trưởng phòng
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-950">Quản lý vai trò</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">Quản lý phòng ban</h1>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Tạo, cập nhật và xóa thông tin phòng ban trong hệ thống.
+          </p>
         </div>
 
         <Button type="button" onClick={openCreateModal}>
-          Tạo vai trò
+          Tạo phòng ban
         </Button>
       </div>
 
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
-          <h2 className="text-lg font-semibold text-slate-950">Danh sách vai trò</h2>
-          {rolesQuery.data?.length ? (
+          <h2 className="text-lg font-semibold text-slate-950">Danh sách phòng ban</h2>
+          {organizationsQuery.data?.length ? (
             <span className="text-sm font-medium text-slate-500">
-              {rolesQuery.data.length} vai trò
+              {organizationsQuery.data.length} phòng ban
             </span>
           ) : null}
         </div>
@@ -129,42 +140,48 @@ export function RolesPage() {
           </p>
         )}
 
-        {rolesQuery.isLoading ? (
-          <p className="px-5 py-6 text-sm text-slate-600">Đang tải vai trò...</p>
-        ) : rolesQuery.isError ? (
-          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách vai trò.</p>
-        ) : rolesQuery.data?.length ? (
+        {organizationsQuery.isLoading ? (
+          <p className="px-5 py-6 text-sm text-slate-600">Đang tải phòng ban...</p>
+        ) : organizationsQuery.isError ? (
+          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách phòng ban.</p>
+        ) : organizationsQuery.data?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Mã vai trò</th>
-                  <th className="px-5 py-3 font-semibold">Tên vai trò</th>
+                  <th className="px-5 py-3 font-semibold">Mã phòng ban</th>
+                  <th className="px-5 py-3 font-semibold">Tên phòng ban</th>
                   <th className="px-5 py-3 font-semibold">Ngày tạo</th>
                   <th className="px-5 py-3 font-semibold">Ngày cập nhật</th>
                   <th className="px-5 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {rolesQuery.data.map((role) => (
-                  <tr key={role.id} className="bg-white">
-                    <td className="px-5 py-4 font-semibold text-slate-950">{role.code}</td>
-                    <td className="px-5 py-4 text-slate-700">{role.name}</td>
-                    <td className="px-5 py-4 text-slate-600">{formatDate(role.createdDate)}</td>
-                    <td className="px-5 py-4 text-slate-600">{formatDate(role.modifiedDate)}</td>
+                {organizationsQuery.data.map((organization) => (
+                  <tr key={organization.id} className="bg-white">
+                    <td className="px-5 py-4 font-semibold text-slate-950">
+                      {organization.code}
+                    </td>
+                    <td className="px-5 py-4 text-slate-700">{organization.name}</td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {formatDate(organization.createdDate)}
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {formatDate(organization.modifiedDate)}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => openEditModal(role)}
+                          onClick={() => openEditModal(organization)}
                           className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                         >
                           Sửa
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleDelete(role)}
-                          disabled={deleteRoleMutation.isPending}
+                          onClick={() => void handleDelete(organization)}
+                          disabled={deleteOrganizationMutation.isPending}
                           className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
                         >
                           Xóa
@@ -178,19 +195,19 @@ export function RolesPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có vai trò nào.
+            Chưa có phòng ban nào.
             <button
               type="button"
               onClick={openCreateModal}
               className="ml-2 font-semibold text-cyan-700 hover:text-cyan-800"
             >
-              Tạo vai trò đầu tiên
+              Tạo phòng ban đầu tiên
             </button>
           </div>
         )}
       </Card>
 
-      {isRoleModalOpen && (
+      {isOrganizationModalOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4 py-6">
           <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -207,26 +224,26 @@ export function RolesPage() {
 
             <form className="space-y-4 p-5" onSubmit={handleSubmit}>
               <label className="block">
-                <span className="text-sm font-medium text-slate-700">Mã vai trò</span>
+                <span className="text-sm font-medium text-slate-700">Mã phòng ban</span>
                 <input
                   value={form.code}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, code: event.target.value }))
                   }
                   className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
-                  placeholder="MANAGER"
+                  placeholder="IT"
                 />
               </label>
 
               <label className="block">
-                <span className="text-sm font-medium text-slate-700">Tên vai trò</span>
+                <span className="text-sm font-medium text-slate-700">Tên phòng ban</span>
                 <input
                   value={form.name}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, name: event.target.value }))
                   }
                   className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
-                  placeholder="Trưởng phòng"
+                  placeholder="Phòng công nghệ"
                 />
               </label>
 
@@ -245,7 +262,11 @@ export function RolesPage() {
                   Hủy
                 </button>
                 <Button type="submit" disabled={isSubmitting} className="disabled:opacity-60">
-                  {isSubmitting ? 'Đang lưu...' : editingRole ? 'Lưu thay đổi' : 'Tạo vai trò'}
+                  {isSubmitting
+                    ? 'Đang lưu...'
+                    : editingOrganization
+                      ? 'Lưu thay đổi'
+                      : 'Tạo phòng ban'}
                 </Button>
               </div>
             </form>

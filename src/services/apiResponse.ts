@@ -9,7 +9,7 @@ function getApiErrorMessage<TData>(response: ApiResponse<TData>) {
     return response.result
   }
 
-  return 'Request failed'
+  return 'Yêu cầu không thành công'
 }
 
 export function unwrapApiResponse<TData>(response: ApiResponse<TData>) {

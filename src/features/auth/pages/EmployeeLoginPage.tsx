@@ -4,9 +4,9 @@ export function EmployeeLoginPage() {
   return (
     <RoleLoginForm
       role="employee"
-      title="Employee login"
-      description="Sign in to view assigned tasks and update your work progress."
-      submitLabel="Login employee"
+      title="Đăng nhập nhân viên"
+      description="Đăng nhập để xem công việc được giao và cập nhật tiến độ."
+      submitLabel="Đăng nhập nhân viên"
     />
   )
 }

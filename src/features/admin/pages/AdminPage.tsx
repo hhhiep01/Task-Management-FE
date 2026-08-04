@@ -7,34 +7,34 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { AdminTabs } from '../components/AdminTabs'
 
 export function AdminPage() {
-  useDocumentTitle(`Admin | ${env.appName}`)
+  useDocumentTitle(`Quản trị | ${env.appName}`)
 
   return (
     <section>
       <AdminTabs />
 
       <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
-        Admin page
+        Trang quản trị
       </p>
-      <h1 className="mt-2 text-4xl font-bold text-slate-950">System administration</h1>
+      <h1 className="mt-2 text-4xl font-bold text-slate-950">Quản trị hệ thống</h1>
       <p className="mt-3 max-w-2xl text-slate-600">
-        Admin can manage users, roles, system settings, and workspace-wide data.
+        Quản trị viên có thể quản lý người dùng, vai trò, cấu hình và dữ liệu toàn hệ thống.
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card className="p-5">
-          <h2 className="text-lg font-semibold text-slate-950">User permissions</h2>
-          <p className="mt-2 text-slate-600">Create accounts and assign access roles.</p>
+          <h2 className="text-lg font-semibold text-slate-950">Phân quyền người dùng</h2>
+          <p className="mt-2 text-slate-600">Tạo tài khoản và gán vai trò truy cập.</p>
           <Link
             to="/admin/roles"
             className="mt-4 inline-flex rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
           >
-            Manage roles
+            Quản lý vai trò
           </Link>
         </Card>
         <Card className="p-5">
-          <h2 className="text-lg font-semibold text-slate-950">System settings</h2>
-          <p className="mt-2 text-slate-600">Configure global behavior for the app.</p>
+          <h2 className="text-lg font-semibold text-slate-950">Cấu hình hệ thống</h2>
+          <p className="mt-2 text-slate-600">Thiết lập các cấu hình chung của ứng dụng.</p>
         </Card>
       </div>
     </section>

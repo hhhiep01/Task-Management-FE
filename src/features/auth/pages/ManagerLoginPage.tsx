@@ -4,9 +4,9 @@ export function ManagerLoginPage() {
   return (
     <RoleLoginForm
       role="manager"
-      title="Manager login"
-      description="Sign in to review team workload, approvals, and delivery status."
-      submitLabel="Login manager"
+      title="Đăng nhập trưởng phòng"
+      description="Đăng nhập để theo dõi khối lượng công việc, phê duyệt và tiến độ của phòng ban."
+      submitLabel="Đăng nhập trưởng phòng"
       submitClassName="bg-emerald-700 hover:bg-emerald-800"
     />
   )

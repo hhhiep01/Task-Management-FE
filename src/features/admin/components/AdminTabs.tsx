@@ -2,10 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/utils/cn'
 
-const adminTabs = [
-  { label: 'Tổng quan', href: '/admin' },
-  { label: 'Quản lý role', href: '/admin/roles' },
-]
+const adminTabs = [{ label: 'Vai trò', href: '/admin/roles' }]
 
 export function AdminTabs() {
   return (
@@ -14,7 +11,7 @@ export function AdminTabs() {
         <NavLink
           key={tab.href}
           to={tab.href}
-          end={tab.href === '/admin'}
+          end
           className={({ isActive }) =>
             cn(
               'border-b-2 px-4 py-3 text-sm font-semibold transition',
