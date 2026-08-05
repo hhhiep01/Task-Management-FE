@@ -19,6 +19,7 @@ type JwtPayload = {
 const roleMap: Record<string, UserRole> = {
   ADMIN: 'admin',
   EMPLOYEE: 'employee',
+  NV: 'employee',
   MANAGER: 'manager',
   PP: 'manager',
   TP: 'manager',

@@ -2,6 +2,7 @@
 
 import { Card } from '@/components/ui/Card'
 import { env } from '@/config/env'
+import { MyTasksPanel } from '@/features/tasks/components/MyTasksPanel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function ManagerPage() {
@@ -70,6 +71,8 @@ export function ManagerPage() {
           <p className="mt-2 text-3xl font-bold text-slate-950">1</p>
         </Card>
       </div>
+
+      <MyTasksPanel />
     </section>
   )
 }

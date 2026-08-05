@@ -17,6 +17,7 @@ import {
 import {
   PeriodStatus,
   PeriodType,
+  toEvaluationPeriodPayload,
   type EvaluationPeriod,
   type EvaluationPeriodPayload,
 } from '../types/evaluationPeriod.types'
@@ -80,15 +81,10 @@ export function EvaluationPeriodsPage() {
   }
 
   const openEditModal = (period: EvaluationPeriod) => {
+    const payload = toEvaluationPeriodPayload(period)
+
     setEditingPeriod(period)
-    setForm({
-      organizationId: period.organization.id,
-      name: period.name,
-      periodType: period.periodType,
-      startDate: toDateInputValue(period.startDate),
-      endDate: toDateInputValue(period.endDate),
-      status: period.status,
-    })
+    setForm(payload)
     setFormError('')
     setIsPeriodModalOpen(true)
   }
@@ -99,10 +95,10 @@ export function EvaluationPeriodsPage() {
     const payload = {
       organizationId: form.organizationId,
       name: form.name.trim(),
-      periodType: Number(form.periodType) as PeriodType,
+      periodType: form.periodType,
       startDate: form.startDate,
       endDate: form.endDate,
-      status: Number(form.status) as PeriodStatus,
+      status: form.status,
     }
 
     if (!payload.organizationId || !payload.name || !payload.startDate || !payload.endDate) {
@@ -132,6 +128,13 @@ export function EvaluationPeriodsPage() {
     }
 
     await deletePeriodMutation.mutateAsync(period.id)
+  }
+
+  const handleStatusChange = async (period: EvaluationPeriod, status: PeriodStatus) => {
+    await updatePeriodMutation.mutateAsync({
+      periodId: period.id,
+      payload: toEvaluationPeriodPayload(period, { status }),
+    })
   }
 
   return (
@@ -198,7 +201,27 @@ export function EvaluationPeriodsPage() {
                     <td className="px-5 py-4 text-slate-600">{formatDate(period.startDate)}</td>
                     <td className="px-5 py-4 text-slate-600">{formatDate(period.endDate)}</td>
                     <td className="px-5 py-4 text-slate-600">
-                      {periodStatusLabels[period.status]}
+                      <select
+                        value={period.status}
+                        onChange={(event) =>
+                          void handleStatusChange(
+                            period,
+                            event.target.value as PeriodStatus,
+                          )
+                        }
+                        disabled={updatePeriodMutation.isPending}
+                        className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100 disabled:opacity-60"
+                      >
+                        <option value={PeriodStatus.DRAFT}>
+                          {periodStatusLabels[PeriodStatus.DRAFT]}
+                        </option>
+                        <option value={PeriodStatus.ACTIVE}>
+                          {periodStatusLabels[PeriodStatus.ACTIVE]}
+                        </option>
+                        <option value={PeriodStatus.CLOSED}>
+                          {periodStatusLabels[PeriodStatus.CLOSED]}
+                        </option>
+                      </select>
                     </td>
                     <td className="px-5 py-4 text-slate-600">
                       {formatDate(period.createdDate)}
@@ -295,7 +318,7 @@ export function EvaluationPeriodsPage() {
                     onChange={(event) =>
                       setForm((current) => ({
                         ...current,
-                        periodType: Number(event.target.value) as PeriodType,
+                        periodType: event.target.value as PeriodType,
                       }))
                     }
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
@@ -313,7 +336,7 @@ export function EvaluationPeriodsPage() {
                     onChange={(event) =>
                       setForm((current) => ({
                         ...current,
-                        status: Number(event.target.value) as PeriodStatus,
+                        status: event.target.value as PeriodStatus,
                       }))
                     }
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
@@ -383,6 +406,3 @@ export function EvaluationPeriodsPage() {
   )
 }
 
-function toDateInputValue(value: string) {
-  return value.slice(0, 10)
-}

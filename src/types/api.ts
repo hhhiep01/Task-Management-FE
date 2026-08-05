@@ -1,5 +1,5 @@
 export type ApiResponse<TData> = {
-  statusCode: number
+  statusCode: number | string
   isSuccess: boolean
   errorMessage?: string | null
   result: TData

@@ -1,17 +1,17 @@
 import type { Organization } from '../../organizations/types/organization.types'
 
 export const PeriodType = {
-  MONTH: 0,
-  QUARTER: 1,
-  YEAR: 2,
+  MONTH: 'MONTH',
+  QUARTER: 'QUARTER',
+  YEAR: 'YEAR',
 } as const
 
 export type PeriodType = (typeof PeriodType)[keyof typeof PeriodType]
 
 export const PeriodStatus = {
-  DRAFT: 0,
-  ACTIVE: 1,
-  CLOSED: 2,
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  CLOSED: 'CLOSED',
 } as const
 
 export type PeriodStatus = (typeof PeriodStatus)[keyof typeof PeriodStatus]
@@ -40,3 +40,18 @@ export type EvaluationPeriodPayload = {
 export type CreateEvaluationPeriodRequest = EvaluationPeriodPayload
 
 export type UpdateEvaluationPeriodRequest = EvaluationPeriodPayload
+
+export function toEvaluationPeriodPayload(
+  period: EvaluationPeriod,
+  overrides: Partial<EvaluationPeriodPayload> = {},
+): EvaluationPeriodPayload {
+  return {
+    organizationId: period.organization.id,
+    name: period.name,
+    periodType: period.periodType,
+    startDate: period.startDate.slice(0, 10),
+    endDate: period.endDate.slice(0, 10),
+    status: period.status,
+    ...overrides,
+  }
+}

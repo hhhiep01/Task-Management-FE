@@ -13,7 +13,7 @@ function getApiErrorMessage<TData>(response: ApiResponse<TData>) {
 }
 
 export function unwrapApiResponse<TData>(response: ApiResponse<TData>) {
-  if (!response.isSuccess || response.statusCode !== 200) {
+  if (!response.isSuccess) {
     throw new Error(getApiErrorMessage(response))
   }
 

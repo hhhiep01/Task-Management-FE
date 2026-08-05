@@ -14,9 +14,15 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatDate } from '@/utils/formatDate'
 
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '../hooks/useTasks'
-import type { Task, TaskPayload } from '../types/task.types'
+import {
+  WorkTaskStatus,
+  getTaskStatusLabel,
+  type CreateTaskRequest,
+  type Task,
+  type TaskFormPayload,
+} from '../types/task.types'
 
-const initialForm: TaskPayload = {
+const initialForm: TaskFormPayload = {
   periodId: '',
   workTemplateId: '',
   assigneeId: '',
@@ -58,6 +64,10 @@ function getAssigneeName(task: Task) {
   return task.assignee?.fullName ?? task.assigneeName ?? task.owner ?? '-'
 }
 
+function getWorkTypeValue(workType?: string | null) {
+  return workType === 'AD_HOC' ? 1 : 0
+}
+
 type ReadOnlyFieldProps = {
   label: string
   value?: string | number | null
@@ -78,7 +88,7 @@ export function TasksPage() {
   useDocumentTitle(`Giao việc | ${env.appName}`)
 
   const { user } = useAuth()
-  const [form, setForm] = useState<TaskPayload>(initialForm)
+  const [form, setForm] = useState<TaskFormPayload>(initialForm)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [formError, setFormError] = useState('')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -98,6 +108,7 @@ export function TasksPage() {
     () => templatesQuery.data?.find((template) => template.id === form.workTemplateId),
     [form.workTemplateId, templatesQuery.data],
   )
+  const templateForRequest = selectedTemplate ?? editingTask?.workTemplate
   const activePeriods = useMemo(
     () => periodsQuery.data?.filter((period) => period.status === PeriodStatus.ACTIVE) ?? [],
     [periodsQuery.data],
@@ -155,14 +166,28 @@ export function TasksPage() {
       return
     }
 
-    const payload: TaskPayload = {
+    const payload: CreateTaskRequest = {
       periodId: form.periodId,
       workTemplateId: form.workTemplateId,
       assigneeId: form.assigneeId,
       title: form.title.trim(),
       description: form.description.trim(),
+      expectedOutput: templateForRequest?.expectedOutput ?? editingTask?.expectedOutput ?? '',
+      workType: getWorkTypeValue(templateForRequest?.workType ?? editingTask?.workType),
       assignedDate: form.assignedDate,
       dueDate: form.dueDate,
+      completedDate: editingTask?.completedDate ?? null,
+      baseScore: templateForRequest?.baseScore ?? editingTask?.baseScore ?? 0,
+      difficultyPercent:
+        templateForRequest?.difficultyPercent ?? editingTask?.difficultyPercent ?? 100,
+      progressPercent: editingTask?.progressPercent ?? 0,
+      resultDescription: editingTask?.resultDescription ?? null,
+      status:
+        editingTask?.status === WorkTaskStatus.IN_PROGRESS ||
+        editingTask?.status === WorkTaskStatus.COMPLETED ||
+        editingTask?.status === WorkTaskStatus.CANCELLED
+          ? editingTask.status
+          : WorkTaskStatus.NEW,
     }
 
     if (
@@ -170,6 +195,7 @@ export function TasksPage() {
       !payload.workTemplateId ||
       !payload.assigneeId ||
       !payload.title ||
+      !payload.expectedOutput ||
       !payload.assignedDate ||
       !payload.dueDate
     ) {
@@ -294,7 +320,7 @@ export function TasksPage() {
                       {task.progressPercent ?? 0}%
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                      {task.status || '-'}
+                      {getTaskStatusLabel(task.status)}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
                       <div className="flex justify-end gap-2">

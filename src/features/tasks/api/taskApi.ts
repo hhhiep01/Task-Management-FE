@@ -6,6 +6,7 @@ import type { CreateTaskRequest, Task, UpdateTaskRequest } from '../types/task.t
 
 export const taskApiLinks = {
   list: '/api/Task',
+  myTasks: '/api/Task/my-tasks',
   create: '/api/Task',
   detail: (taskId: string) => `/api/Task/${taskId}`,
   update: (taskId: string) => `/api/Task/${taskId}`,
@@ -20,6 +21,11 @@ export type DeleteTaskResponse = ApiResponse<null>
 
 export async function getTasks(): Promise<Task[]> {
   const response = await httpClient.get<GetTasksResponse>(taskApiLinks.list)
+  return unwrapApiResponse(response.data)
+}
+
+export async function getMyTasks(): Promise<Task[]> {
+  const response = await httpClient.get<GetTasksResponse>(taskApiLinks.myTasks)
   return unwrapApiResponse(response.data)
 }
 
