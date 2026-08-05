@@ -48,6 +48,12 @@ export function ManagerPage() {
         >
           Quản lý danh mục công việc
         </Link>
+        <Link
+          to="/manager/tasks"
+          className="inline-flex rounded-md bg-cyan-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-800"
+        >
+          Giao việc
+        </Link>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">

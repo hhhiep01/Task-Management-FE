@@ -14,6 +14,7 @@ import { EvaluationPeriodsPage } from '@/features/evaluation-periods/pages/Evalu
 import { ManagerPage } from '@/features/manager/pages/ManagerPage'
 import { OrganizationsPage } from '@/features/organizations/pages/OrganizationsPage'
 import { RolesPage } from '@/features/roles/pages/RolesPage'
+import { TasksPage } from '@/features/tasks/pages/TasksPage'
 import { WorkCategoriesPage } from '@/features/work-categories/pages/WorkCategoriesPage'
 import { WorkTemplatesPage } from '@/features/work-templates/pages/WorkTemplatesPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -56,6 +57,7 @@ export function AppRoutes() {
           <Route path="/manager/evaluation-periods" element={<EvaluationPeriodsPage />} />
           <Route path="/manager/work-categories" element={<WorkCategoriesPage />} />
           <Route path="/manager/work-templates" element={<WorkTemplatesPage />} />
+          <Route path="/manager/tasks" element={<TasksPage />} />
         </Route>
       </Route>
 

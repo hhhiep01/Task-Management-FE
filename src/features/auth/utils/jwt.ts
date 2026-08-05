@@ -58,7 +58,8 @@ export function getUserFromToken(token: string): AuthUser {
     throw new Error('Phiên đăng nhập đã hết hạn')
   }
 
-  const role = roleMap[(payload[roleClaim] || payload.Role || '').toUpperCase()]
+  const roleCode = (payload[roleClaim] || payload.Role || '').toUpperCase()
+  const role = roleMap[roleCode]
 
   if (!role || role === 'guest') {
     throw new Error('Vai trò người dùng không hợp lệ')
@@ -72,5 +73,6 @@ export function getUserFromToken(token: string): AuthUser {
     name,
     email: payload.Email || '',
     role,
+    roleCode,
   }
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { env } from '@/config/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useRoles } from '@/features/roles/hooks/useRoles'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { Role } from '@/features/roles/types/role.types'
@@ -23,6 +24,7 @@ const initialForm: UserAccountForm = {
   email: '',
   password: '',
   roleId: '',
+  organizationId: '',
 }
 
 export function UserAccountsPage() {
@@ -36,6 +38,7 @@ export function UserAccountsPage() {
 
   const accountsQuery = useUserAccounts()
   const rolesQuery = useRoles()
+  const organizationsQuery = useOrganizations()
   const createAccountMutation = useCreateUserAccount()
   const updateAccountMutation = useUpdateUserAccount()
   const deleteAccountMutation = useDeleteUserAccount()
@@ -82,6 +85,7 @@ export function UserAccountsPage() {
       email: account.email,
       password: '',
       roleId: account.role.id,
+      organizationId: account.organization?.id ?? '',
     })
     setFormError('')
     setIsAccountModalOpen(true)
@@ -95,10 +99,11 @@ export function UserAccountsPage() {
       email: form.email.trim(),
       password: form.password.trim(),
       roleId: form.roleId,
+      organizationId: form.organizationId,
     }
 
-    if (!payload.fullName || !payload.email || !payload.roleId) {
-      setFormError('Vui lòng nhập họ tên, email và vai trò.')
+    if (!payload.fullName || !payload.email || !payload.roleId || !payload.organizationId) {
+      setFormError('Vui lòng nhập họ tên, email, vai trò và phòng ban.')
       return
     }
 
@@ -116,6 +121,7 @@ export function UserAccountsPage() {
           fullName: payload.fullName,
           email: payload.email,
           roleId: payload.roleId,
+          organizationId: payload.organizationId,
           ...(canEditPassword && payload.password ? { password: payload.password } : {}),
         },
       })
@@ -176,12 +182,13 @@ export function UserAccountsPage() {
           <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách tài khoản.</p>
         ) : accountsQuery.data?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Họ tên</th>
                   <th className="px-5 py-3 font-semibold">Email</th>
                   <th className="px-5 py-3 font-semibold">Vai trò</th>
+                  <th className="px-5 py-3 font-semibold">Phòng ban</th>
                   <th className="px-5 py-3 font-semibold">Ngày tạo</th>
                   <th className="px-5 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
@@ -195,6 +202,9 @@ export function UserAccountsPage() {
                     <td className="px-5 py-4 text-slate-700">{account.email}</td>
                     <td className="px-5 py-4 text-slate-600">
                       {account.role.name || account.role.code}
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {account.organization?.name ?? '-'}
                     </td>
                     <td className="px-5 py-4 text-slate-600">
                       {formatDate(account.createdDate)}
@@ -308,6 +318,24 @@ export function UserAccountsPage() {
                   {roleOptions.map((role) => (
                     <option key={role.id} value={role.id}>
                       {role.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-700">Phòng ban</span>
+                <select
+                  value={form.organizationId}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, organizationId: event.target.value }))
+                  }
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="">Chọn phòng ban</option>
+                  {organizationsQuery.data?.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
                     </option>
                   ))}
                 </select>

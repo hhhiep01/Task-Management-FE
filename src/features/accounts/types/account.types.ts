@@ -16,12 +16,14 @@ export type CreateUserAccountRequest = {
   email: string
   password: string
   roleId: string
+  organizationId: string
 }
 
 export type UpdateUserAccountRequest = {
   fullName: string
   email: string
   roleId: string
+  organizationId: string
   password?: string
 }
 
@@ -30,4 +32,5 @@ export type UserAccountForm = {
   email: string
   password: string
   roleId: string
+  organizationId: string
 }

@@ -17,6 +17,7 @@ const navigation: NavigationItem[] = [
   { label: 'Kỳ đánh giá', href: '/manager/evaluation-periods', roles: ['manager'] },
   { label: 'Nhóm công việc', href: '/manager/work-categories', roles: ['manager'] },
   { label: 'Danh mục công việc', href: '/manager/work-templates', roles: ['manager'] },
+  { label: 'Giao việc', href: '/manager/tasks', roles: ['manager'] },
   { label: 'Quản trị', href: '/admin', roles: ['admin'] },
   { label: 'Tài khoản', href: '/admin/accounts', roles: ['admin'] },
   { label: 'Vai trò', href: '/admin/roles', roles: ['admin'] },

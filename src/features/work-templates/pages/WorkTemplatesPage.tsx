@@ -14,6 +14,7 @@ import {
   useUpdateWorkTemplate,
   useWorkTemplates,
 } from '../hooks/useWorkTemplates'
+import { WorkType, getWorkTypeLabel, workTypeLabels } from '../types/workTemplate.types'
 import type { WorkTemplate, WorkTemplatePayload } from '../types/workTemplate.types'
 
 const initialForm: WorkTemplatePayload = {
@@ -21,7 +22,7 @@ const initialForm: WorkTemplatePayload = {
   name: '',
   expectedOutput: '',
   standardDeadline: '',
-  workType: '',
+  workType: WorkType.REGULAR,
   baseScore: 0,
   difficultyPercent: 0,
   evidenceRequirement: '',
@@ -50,6 +51,8 @@ export function WorkTemplatesPage() {
   }, [createTemplateMutation.error, updateTemplateMutation.error])
   const deleteError =
     deleteTemplateMutation.error instanceof Error ? deleteTemplateMutation.error.message : ''
+  const normalizeWorkType = (value: string) =>
+    value === WorkType.AD_HOC ? WorkType.AD_HOC : WorkType.REGULAR
 
   const closeModal = () => {
     setForm(initialForm)
@@ -72,7 +75,7 @@ export function WorkTemplatesPage() {
       name: template.name,
       expectedOutput: template.expectedOutput,
       standardDeadline: template.standardDeadline,
-      workType: template.workType,
+      workType: normalizeWorkType(template.workType),
       baseScore: template.baseScore,
       difficultyPercent: template.difficultyPercent,
       evidenceRequirement: template.evidenceRequirement,
@@ -90,7 +93,7 @@ export function WorkTemplatesPage() {
       name: form.name.trim(),
       expectedOutput: form.expectedOutput.trim(),
       standardDeadline: form.standardDeadline.trim(),
-      workType: form.workType.trim(),
+      workType: form.workType,
       baseScore: Number(form.baseScore),
       difficultyPercent: Number(form.difficultyPercent),
       evidenceRequirement: form.evidenceRequirement.trim(),
@@ -199,7 +202,9 @@ export function WorkTemplatesPage() {
                   <tr key={template.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">{template.name}</td>
                     <td className="px-5 py-4 text-slate-700">{template.workCategory.name}</td>
-                    <td className="px-5 py-4 text-slate-600">{template.workType || '-'}</td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {getWorkTypeLabel(template.workType)}
+                    </td>
                     <td className="min-w-80 whitespace-normal px-5 py-4 text-slate-600">{template.expectedOutput || '-'}</td>
                     <td className="px-5 py-4 text-slate-600">{template.standardDeadline || '-'}</td>
                     <td className="px-5 py-4 text-slate-600">{template.baseScore}</td>
@@ -300,14 +305,19 @@ export function WorkTemplatesPage() {
 
                 <label className="grid gap-2">
                   <span className="text-sm font-medium text-slate-700">Loại công việc</span>
-                  <input
+                  <select
                     value={form.workType}
                     onChange={(event) =>
-                      setForm((current) => ({ ...current, workType: event.target.value }))
+                      setForm((current) => ({
+                        ...current,
+                        workType: normalizeWorkType(event.target.value),
+                      }))
                     }
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
-                    placeholder="Định kỳ"
-                  />
+                  >
+                    <option value={WorkType.REGULAR}>{workTypeLabels[WorkType.REGULAR]}</option>
+                    <option value={WorkType.AD_HOC}>{workTypeLabels[WorkType.AD_HOC]}</option>
+                  </select>
                 </label>
               </div>
 

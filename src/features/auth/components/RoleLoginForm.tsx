@@ -44,7 +44,7 @@ export function RoleLoginForm({
 }: RoleLoginFormProps) {
   useDocumentTitle(`${title} | ${env.appName}`)
 
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, login, user } = useAuth()
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
@@ -53,7 +53,7 @@ export function RoleLoginForm({
   const redirectTo = state?.from?.pathname ?? `/${role}`
 
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />
+    return <Navigate to={`/${user?.role ?? role}`} replace />
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
