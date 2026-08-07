@@ -1,5 +1,6 @@
 ﻿import { NavLink, Outlet } from 'react-router-dom'
 
+import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { UserRole } from '@/features/auth/types/auth.types'
 
@@ -27,10 +28,10 @@ export function AppLayout() {
   const { user, logout } = useAuth()
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-8">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-col justify-between gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center">
-          <nav className="flex gap-2">
+    <main className="min-h-screen bg-[var(--color-app-bg)] px-6 py-8">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-6 flex flex-col justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center">
+          <nav className="flex flex-wrap gap-2">
             {navigation
               .filter((item) => item.roles.includes(user?.role ?? 'guest'))
               .map((item) => (
@@ -41,8 +42,8 @@ export function AppLayout() {
                     [
                       'rounded-md px-3 py-2 text-sm font-medium transition',
                       isActive
-                        ? 'bg-cyan-50 text-cyan-800'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                        ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-text-strong)]',
                     ].join(' ')
                   }
                 >
@@ -52,16 +53,12 @@ export function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-[var(--color-text-muted)]">
               {user?.name} - {user?.role}
             </span>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-            >
+            <Button type="button" variant="secondary" size="sm" onClick={logout}>
               Đăng xuất
-            </button>
+            </Button>
           </div>
         </header>
 
