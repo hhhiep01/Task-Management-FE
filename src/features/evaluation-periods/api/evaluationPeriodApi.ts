@@ -1,6 +1,7 @@
 import { unwrapApiResponse } from '@/services/apiResponse'
 import { httpClient } from '@/services/httpClient'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateEvaluationPeriodRequest,
@@ -16,15 +17,24 @@ export const evaluationPeriodApiLinks = {
   delete: (periodId: string) => `/api/EvaluationPeriod/${periodId}`,
 }
 
-export type GetEvaluationPeriodsResponse = ApiResponse<EvaluationPeriod[]>
+export type EvaluationPeriodQuery = PaginationQuery & {
+  organizationId?: string
+  periodType?: string
+  status?: string
+  fromDate?: string
+  toDate?: string
+}
+
+export type GetEvaluationPeriodsResponse = ApiResponse<PagedResult<EvaluationPeriod>>
 export type GetEvaluationPeriodByIdResponse = ApiResponse<EvaluationPeriod>
 export type CreateEvaluationPeriodResponse = ApiResponse<EvaluationPeriod>
 export type UpdateEvaluationPeriodResponse = ApiResponse<EvaluationPeriod>
 export type DeleteEvaluationPeriodResponse = ApiResponse<null>
 
-export async function getEvaluationPeriods(): Promise<EvaluationPeriod[]> {
+export async function getEvaluationPeriods(query: EvaluationPeriodQuery, signal?: AbortSignal) {
   const response = await httpClient.get<GetEvaluationPeriodsResponse>(
     evaluationPeriodApiLinks.list,
+    { params: buildQueryParams(query), signal },
   )
   return unwrapApiResponse(response.data)
 }

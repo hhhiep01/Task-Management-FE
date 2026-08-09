@@ -3,9 +3,11 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
 import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import {
@@ -25,6 +27,8 @@ const initialForm: WorkCategoryPayload = {
   isActive: true,
 }
 
+const filterKeys = ['organizationId', 'isActive'] as const
+
 export function WorkCategoriesPage() {
   useDocumentTitle(`Quản lý nhóm công việc | ${env.appName}`)
 
@@ -33,7 +37,11 @@ export function WorkCategoriesPage() {
   const [formError, setFormError] = useState('')
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
 
-  const categoriesQuery = useWorkCategories()
+  const listState = usePagedListState(filterKeys)
+  const categoriesQuery = useWorkCategories({
+    ...listState.query,
+    isActive: listState.filters.isActive ? listState.filters.isActive === 'true' : undefined,
+  })
   const organizationsQuery = useOrganizations()
   const createCategoryMutation = useCreateWorkCategory()
   const updateCategoryMutation = useUpdateWorkCategory()
@@ -143,11 +151,17 @@ export function WorkCategoriesPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách nhóm công việc</h2>
-          {categoriesQuery.data?.length ? (
+          {categoriesQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {categoriesQuery.data.length} nhóm
+              {categoriesQuery.data.totalCount} nhóm
             </span>
           ) : null}
+        </div>
+        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_220px_220px_auto]">
+          <FilterInput label="Tìm kiếm" value={listState.searchInput} onChange={listState.setSearchInput} />
+          <FilterSelect label="Phòng ban" value={listState.filters.organizationId} onChange={(value) => listState.setFilter('organizationId', value)} options={organizationsQuery.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+          <FilterSelect label="Trạng thái" value={listState.filters.isActive} onChange={(value) => listState.setFilter('isActive', value)} options={[{ value: 'true', label: 'Đang hoạt động' }, { value: 'false', label: 'Ngừng hoạt động' }]} />
+          {listState.hasActiveFilters ? <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>Xóa bộ lọc</Button> : null}
         </div>
 
         {deleteError && (
@@ -160,9 +174,9 @@ export function WorkCategoriesPage() {
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải nhóm công việc...</p>
         ) : categoriesQuery.isError ? (
           <p className="px-5 py-6 text-sm text-red-700">
-            Không tải được danh sách nhóm công việc.
+            {categoriesQuery.error instanceof Error ? categoriesQuery.error.message : 'Không tải được danh sách nhóm công việc.'}
           </p>
-        ) : categoriesQuery.data?.length ? (
+        ) : categoriesQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -178,7 +192,7 @@ export function WorkCategoriesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {categoriesQuery.data.map((category) => (
+                {categoriesQuery.data.items.map((category) => (
                   <tr key={category.id} className="bg-white">
                     <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-950">{category.code}</td>
                     <td className="whitespace-nowrap px-5 py-4 text-slate-700">{category.name}</td>
@@ -217,7 +231,7 @@ export function WorkCategoriesPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có nhóm công việc nào.
+            {listState.hasActiveFilters ? 'Không có nhóm công việc phù hợp.' : 'Chưa có nhóm công việc nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -227,6 +241,7 @@ export function WorkCategoriesPage() {
             </button>
           </div>
         )}
+        {categoriesQuery.data ? <Pagination {...categoriesQuery.data} onPageChange={listState.setPageNumber} onPageSizeChange={listState.setPageSize} disabled={categoriesQuery.isFetching} /> : null}
       </Card>
 
       {isCategoryModalOpen && (
@@ -255,7 +270,7 @@ export function WorkCategoriesPage() {
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="">Chọn phòng ban</option>
-                  {organizationsQuery.data?.map((organization) => (
+                  {organizationsQuery.data?.items.map((organization) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.name}
                     </option>
@@ -370,4 +385,12 @@ export function WorkCategoriesPage() {
       )}
     </section>
   )
+}
+
+function FilterInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Mã, tên nhóm công việc" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100" /></label>
+}
+
+function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"><option value="">Tất cả</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
 }

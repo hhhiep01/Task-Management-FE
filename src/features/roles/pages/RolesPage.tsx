@@ -3,9 +3,11 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { AdminTabs } from '@/features/admin/components/AdminTabs'
 import { env } from '@/config/env'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from '../hooks/useRoles'
@@ -16,6 +18,8 @@ const initialForm: RolePayload = {
   name: '',
 }
 
+const filterKeys = [] as const
+
 export function RolesPage() {
   useDocumentTitle(`Quản lý vai trò | ${env.appName}`)
 
@@ -24,7 +28,8 @@ export function RolesPage() {
   const [formError, setFormError] = useState('')
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
 
-  const rolesQuery = useRoles()
+  const listState = usePagedListState(filterKeys)
+  const rolesQuery = useRoles(listState.query)
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
   const deleteRoleMutation = useDeleteRole()
@@ -116,10 +121,27 @@ export function RolesPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách vai trò</h2>
-          {rolesQuery.data?.length ? (
+          {rolesQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {rolesQuery.data.length} vai trò
+              {rolesQuery.data.totalCount} vai trò
             </span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row">
+          <label className="grid flex-1 gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Tìm kiếm</span>
+            <input
+              value={listState.searchInput}
+              onChange={(event) => listState.setSearchInput(event.target.value)}
+              className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+              placeholder="Mã hoặc tên vai trò"
+            />
+          </label>
+          {listState.hasActiveFilters ? (
+            <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>
+              Xóa bộ lọc
+            </Button>
           ) : null}
         </div>
 
@@ -132,8 +154,10 @@ export function RolesPage() {
         {rolesQuery.isLoading ? (
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải vai trò...</p>
         ) : rolesQuery.isError ? (
-          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách vai trò.</p>
-        ) : rolesQuery.data?.length ? (
+          <p className="px-5 py-6 text-sm text-red-700">
+            {rolesQuery.error instanceof Error ? rolesQuery.error.message : 'Không tải được danh sách vai trò.'}
+          </p>
+        ) : rolesQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -146,7 +170,7 @@ export function RolesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {rolesQuery.data.map((role) => (
+                {rolesQuery.data.items.map((role) => (
                   <tr key={role.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">{role.code}</td>
                     <td className="px-5 py-4 text-slate-700">{role.name}</td>
@@ -178,7 +202,7 @@ export function RolesPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có vai trò nào.
+            {listState.hasActiveFilters ? 'Không có vai trò phù hợp.' : 'Chưa có vai trò nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -188,6 +212,14 @@ export function RolesPage() {
             </button>
           </div>
         )}
+        {rolesQuery.data ? (
+          <Pagination
+            {...rolesQuery.data}
+            onPageChange={listState.setPageNumber}
+            onPageSizeChange={listState.setPageSize}
+            disabled={rolesQuery.isFetching}
+          />
+        ) : null}
       </Card>
 
       {isRoleModalOpen && (

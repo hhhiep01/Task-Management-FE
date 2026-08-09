@@ -1,6 +1,7 @@
 import { unwrapApiResponse } from '@/services/apiResponse'
 import { httpClient } from '@/services/httpClient'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateOrganizationRequest,
@@ -16,14 +17,17 @@ export const organizationApiLinks = {
   delete: (organizationId: string) => `/api/Organization/${organizationId}`,
 }
 
-export type GetOrganizationsResponse = ApiResponse<Organization[]>
+export type GetOrganizationsResponse = ApiResponse<PagedResult<Organization>>
 export type GetOrganizationByIdResponse = ApiResponse<Organization>
 export type CreateOrganizationResponse = ApiResponse<Organization>
 export type UpdateOrganizationResponse = ApiResponse<Organization>
 export type DeleteOrganizationResponse = ApiResponse<null>
 
-export async function getOrganizations(): Promise<Organization[]> {
-  const response = await httpClient.get<GetOrganizationsResponse>(organizationApiLinks.list)
+export async function getOrganizations(query: PaginationQuery, signal?: AbortSignal) {
+  const response = await httpClient.get<GetOrganizationsResponse>(organizationApiLinks.list, {
+    params: buildQueryParams(query),
+    signal,
+  })
   return unwrapApiResponse(response.data)
 }
 

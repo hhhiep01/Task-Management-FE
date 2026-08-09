@@ -7,20 +7,12 @@ type ProtectedRouteProps = {
   allowedRoles?: UserRole[]
 }
 
-const roleLoginPaths = {
-  admin: '/login/admin',
-  employee: '/login/employee',
-  manager: '/login/manager',
-  guest: '/login',
-}
-
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
 
   if (!isAuthenticated) {
-    const loginPath = roleLoginPaths[allowedRoles?.[0] ?? 'guest']
-    return <Navigate to={loginPath} replace state={{ from: location }} />
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role ?? 'guest')) {

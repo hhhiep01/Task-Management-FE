@@ -6,16 +6,18 @@ import {
   getEvaluationPeriods,
   updateEvaluationPeriod,
 } from '../api/evaluationPeriodApi'
+import type { EvaluationPeriodQuery } from '../api/evaluationPeriodApi'
 import type { EvaluationPeriodPayload } from '../types/evaluationPeriod.types'
 
 export const evaluationPeriodQueryKeys = {
   all: ['evaluation-periods'] as const,
 }
 
-export function useEvaluationPeriods() {
+export function useEvaluationPeriods(query: EvaluationPeriodQuery = { pageNumber: 1, pageSize: 100 }) {
   return useQuery({
-    queryKey: evaluationPeriodQueryKeys.all,
-    queryFn: getEvaluationPeriods,
+    queryKey: [...evaluationPeriodQueryKeys.all, query],
+    queryFn: ({ signal }) => getEvaluationPeriods(query, signal),
+    placeholderData: (previousData) => previousData,
   })
 }
 

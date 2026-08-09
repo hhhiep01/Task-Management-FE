@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/utils/cn'
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'wide'
 
 type ModalProps = {
   open: boolean
@@ -20,6 +20,7 @@ const sizeClasses: Record<ModalSize, string> = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  wide: 'max-w-5xl',
 }
 
 export function Modal({
@@ -43,7 +44,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          'flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-modal)]',
+          'flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] text-left shadow-[var(--shadow-modal)]',
           sizeClasses[size],
         )}
       >

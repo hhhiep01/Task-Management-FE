@@ -1,6 +1,7 @@
 import { unwrapApiResponse } from '@/services/apiResponse'
 import { httpClient } from '@/services/httpClient'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateUserAccountRequest,
@@ -16,14 +17,22 @@ export const userAccountApiLinks = {
   delete: (accountId: string) => `/api/UserAccount/${accountId}`,
 }
 
-export type GetUserAccountsResponse = ApiResponse<UserAccount[]>
+export type UserAccountQuery = PaginationQuery & {
+  roleId?: string
+  organizationId?: string
+}
+
+export type GetUserAccountsResponse = ApiResponse<PagedResult<UserAccount>>
 export type GetUserAccountByIdResponse = ApiResponse<UserAccount>
 export type CreateUserAccountResponse = ApiResponse<UserAccount>
 export type UpdateUserAccountResponse = ApiResponse<UserAccount>
 export type DeleteUserAccountResponse = ApiResponse<null>
 
-export async function getUserAccounts(): Promise<UserAccount[]> {
-  const response = await httpClient.get<GetUserAccountsResponse>(userAccountApiLinks.list)
+export async function getUserAccounts(query: UserAccountQuery, signal?: AbortSignal) {
+  const response = await httpClient.get<GetUserAccountsResponse>(userAccountApiLinks.list, {
+    params: buildQueryParams(query),
+    signal,
+  })
   return unwrapApiResponse(response.data)
 }
 

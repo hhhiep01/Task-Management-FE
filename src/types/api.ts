@@ -5,9 +5,18 @@ export type ApiResponse<TData> = {
   result: TData
 }
 
-export type PaginatedResponse<TItem> = {
+export type PagedResult<TItem> = {
   items: TItem[]
-  page: number
+  totalCount: number
+  pageNumber: number
   pageSize: number
-  total: number
+  totalPages: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export type PaginationQuery = {
+  pageNumber: number
+  pageSize: number
+  search?: string
 }

@@ -1,17 +1,11 @@
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '@/features/auth/hooks/useAuth'
-
-const roleHomePaths = {
-  admin: '/admin',
-  employee: '/employee',
-  manager: '/manager',
-  guest: '/login',
-}
+import { getUserHomePath } from '@/features/auth/utils/redirects'
 
 export function UnauthorizedPage() {
   const { user } = useAuth()
-  const homePath = roleHomePaths[user?.role ?? 'guest']
+  const homePath = getUserHomePath(user)
   const actionLabel = user ? 'Về trang của tôi' : 'Chọn tài khoản đăng nhập khác'
 
   return (

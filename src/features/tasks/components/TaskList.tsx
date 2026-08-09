@@ -65,6 +65,14 @@ function getStatusVariant(task: Task) {
     return 'neutral' as const
   }
 
+  if (task.status === WorkTaskStatus.WAITING_EVALUATION) {
+    return 'warning' as const
+  }
+
+  if (task.status === WorkTaskStatus.REVISION_REQUIRED) {
+    return 'warning' as const
+  }
+
   if (task.status === WorkTaskStatus.IN_PROGRESS) {
     return 'primary' as const
   }

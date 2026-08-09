@@ -6,16 +6,18 @@ import {
   getWorkCategories,
   updateWorkCategory,
 } from '../api/workCategoryApi'
+import type { WorkCategoryQuery } from '../api/workCategoryApi'
 import type { WorkCategoryPayload } from '../types/workCategory.types'
 
 export const workCategoryQueryKeys = {
   all: ['work-categories'] as const,
 }
 
-export function useWorkCategories() {
+export function useWorkCategories(query: WorkCategoryQuery = { pageNumber: 1, pageSize: 100 }) {
   return useQuery({
-    queryKey: workCategoryQueryKeys.all,
-    queryFn: getWorkCategories,
+    queryKey: [...workCategoryQueryKeys.all, query],
+    queryFn: ({ signal }) => getWorkCategories(query, signal),
+    placeholderData: (previousData) => previousData,
   })
 }
 

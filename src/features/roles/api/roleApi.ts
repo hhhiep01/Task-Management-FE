@@ -1,6 +1,7 @@
 import { httpClient } from '@/services/httpClient'
 import { unwrapApiResponse } from '@/services/apiResponse'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type { CreateRoleRequest, Role, UpdateRoleRequest } from '../types/role.types'
 
@@ -12,14 +13,17 @@ export const roleApiLinks = {
   delete: (roleId: string) => `/api/Role/${roleId}`,
 }
 
-export type GetRolesResponse = ApiResponse<Role[]>
+export type GetRolesResponse = ApiResponse<PagedResult<Role>>
 export type GetRoleByIdResponse = ApiResponse<Role>
 export type CreateRoleResponse = ApiResponse<Role>
 export type UpdateRoleResponse = ApiResponse<Role>
 export type DeleteRoleResponse = ApiResponse<null>
 
-export async function getRoles(): Promise<Role[]> {
-  const response = await httpClient.get<GetRolesResponse>(roleApiLinks.list)
+export async function getRoles(query: PaginationQuery, signal?: AbortSignal) {
+  const response = await httpClient.get<GetRolesResponse>(roleApiLinks.list, {
+    params: buildQueryParams(query),
+    signal,
+  })
   return unwrapApiResponse(response.data)
 }
 

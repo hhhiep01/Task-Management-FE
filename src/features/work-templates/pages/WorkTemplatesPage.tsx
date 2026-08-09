@@ -3,9 +3,12 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
+import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useWorkCategories } from '@/features/work-categories/hooks/useWorkCategories'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import {
@@ -29,6 +32,8 @@ const initialForm: WorkTemplatePayload = {
   isActive: true,
 }
 
+const filterKeys = ['workCategoryId', 'organizationId', 'workType', 'isActive'] as const
+
 export function WorkTemplatesPage() {
   useDocumentTitle(`Quản lý danh mục công việc | ${env.appName}`)
 
@@ -37,8 +42,13 @@ export function WorkTemplatesPage() {
   const [formError, setFormError] = useState('')
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
 
-  const templatesQuery = useWorkTemplates()
+  const listState = usePagedListState(filterKeys)
+  const templatesQuery = useWorkTemplates({
+    ...listState.query,
+    isActive: listState.filters.isActive ? listState.filters.isActive === 'true' : undefined,
+  })
   const categoriesQuery = useWorkCategories()
+  const organizationsQuery = useOrganizations()
   const createTemplateMutation = useCreateWorkTemplate()
   const updateTemplateMutation = useUpdateWorkTemplate()
   const deleteTemplateMutation = useDeleteWorkTemplate()
@@ -160,11 +170,19 @@ export function WorkTemplatesPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách danh mục công việc</h2>
-          {templatesQuery.data?.length ? (
+          {templatesQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {templatesQuery.data.length} danh mục
+              {templatesQuery.data.totalCount} danh mục
             </span>
           ) : null}
+        </div>
+        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 xl:grid-cols-3">
+          <FilterInput value={listState.searchInput} onChange={listState.setSearchInput} />
+          <FilterSelect label="Nhóm công việc" value={listState.filters.workCategoryId} onChange={(value) => listState.setFilter('workCategoryId', value)} options={categoriesQuery.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+          <FilterSelect label="Phòng ban" value={listState.filters.organizationId} onChange={(value) => listState.setFilter('organizationId', value)} options={organizationsQuery.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+          <FilterSelect label="Loại công việc" value={listState.filters.workType} onChange={(value) => listState.setFilter('workType', value)} options={Object.values(WorkType).map((value) => ({ value, label: workTypeLabels[value] }))} />
+          <FilterSelect label="Trạng thái" value={listState.filters.isActive} onChange={(value) => listState.setFilter('isActive', value)} options={[{ value: 'true', label: 'Đang hoạt động' }, { value: 'false', label: 'Ngừng hoạt động' }]} />
+          {listState.hasActiveFilters ? <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>Xóa bộ lọc</Button> : null}
         </div>
 
         {deleteError && (
@@ -177,9 +195,9 @@ export function WorkTemplatesPage() {
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải danh mục công việc...</p>
         ) : templatesQuery.isError ? (
           <p className="px-5 py-6 text-sm text-red-700">
-            Không tải được danh sách danh mục công việc.
+            {templatesQuery.error instanceof Error ? templatesQuery.error.message : 'Không tải được danh sách danh mục công việc.'}
           </p>
-        ) : templatesQuery.data?.length ? (
+        ) : templatesQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1400px] whitespace-nowrap text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -198,7 +216,7 @@ export function WorkTemplatesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {templatesQuery.data.map((template) => (
+                {templatesQuery.data.items.map((template) => (
                   <tr key={template.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">{template.name}</td>
                     <td className="px-5 py-4 text-slate-700">{template.workCategory.name}</td>
@@ -244,7 +262,7 @@ export function WorkTemplatesPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có danh mục công việc nào.
+            {listState.hasActiveFilters ? 'Không có danh mục công việc phù hợp.' : 'Chưa có danh mục công việc nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -254,6 +272,7 @@ export function WorkTemplatesPage() {
             </button>
           </div>
         )}
+        {templatesQuery.data ? <Pagination {...templatesQuery.data} onPageChange={listState.setPageNumber} onPageSizeChange={listState.setPageSize} disabled={templatesQuery.isFetching} /> : null}
       </Card>
 
       {isTemplateModalOpen && (
@@ -282,7 +301,7 @@ export function WorkTemplatesPage() {
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="">Chọn nhóm công việc</option>
-                  {categoriesQuery.data?.map((category) => (
+                  {categoriesQuery.data?.items.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
@@ -445,6 +464,14 @@ export function WorkTemplatesPage() {
       )}
     </section>
   )
+}
+
+function FilterInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">Tìm kiếm</span><input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Tên danh mục công việc" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100" /></label>
+}
+
+function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"><option value="">Tất cả</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
 }
 
 function clampPercent(value: number) {

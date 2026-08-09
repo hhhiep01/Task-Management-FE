@@ -6,16 +6,18 @@ import {
   getUserAccounts,
   updateUserAccount,
 } from '../api/userAccountApi'
+import type { UserAccountQuery } from '../api/userAccountApi'
 import type { CreateUserAccountRequest, UpdateUserAccountRequest } from '../types/account.types'
 
 export const userAccountQueryKeys = {
   all: ['user-accounts'] as const,
 }
 
-export function useUserAccounts() {
+export function useUserAccounts(query: UserAccountQuery = { pageNumber: 1, pageSize: 100 }) {
   return useQuery({
-    queryKey: userAccountQueryKeys.all,
-    queryFn: getUserAccounts,
+    queryKey: [...userAccountQueryKeys.all, query],
+    queryFn: ({ signal }) => getUserAccounts(query, signal),
+    placeholderData: (previousData) => previousData,
   })
 }
 

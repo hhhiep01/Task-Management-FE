@@ -2,7 +2,6 @@
 
 import { Card } from '@/components/ui/Card'
 import { env } from '@/config/env'
-import { MyTasksPanel } from '@/features/tasks/components/MyTasksPanel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function ManagerPage() {
@@ -19,18 +18,6 @@ export function ManagerPage() {
       </p>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link
-          to="/manager/accounts"
-          className="inline-flex rounded-md bg-cyan-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-800"
-        >
-          Quản lý tài khoản
-        </Link>
-        <Link
-          to="/manager/organizations"
-          className="inline-flex rounded-md bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
-        >
-          Quản lý phòng ban
-        </Link>
         <Link
           to="/manager/evaluation-periods"
           className="inline-flex rounded-md bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
@@ -72,7 +59,6 @@ export function ManagerPage() {
         </Card>
       </div>
 
-      <MyTasksPanel />
     </section>
   )
 }

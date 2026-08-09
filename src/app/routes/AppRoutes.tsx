@@ -3,10 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { UserAccountsPage } from '@/features/accounts/pages/UserAccountsPage'
 import { AdminPage } from '@/features/admin/pages/AdminPage'
-import { AdminLoginPage } from '@/features/auth/pages/AdminLoginPage'
-import { EmployeeLoginPage } from '@/features/auth/pages/EmployeeLoginPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { ManagerLoginPage } from '@/features/auth/pages/ManagerLoginPage'
 import { ProtectedRoute } from '@/features/auth/routes/ProtectedRoute'
 import { RoleRedirect } from '@/features/auth/routes/RoleRedirect'
 import { EmployeePage } from '@/features/employee/pages/EmployeePage'
@@ -14,7 +11,9 @@ import { EvaluationPeriodsPage } from '@/features/evaluation-periods/pages/Evalu
 import { ManagerPage } from '@/features/manager/pages/ManagerPage'
 import { OrganizationsPage } from '@/features/organizations/pages/OrganizationsPage'
 import { RolesPage } from '@/features/roles/pages/RolesPage'
+import { TaskDetailPage } from '@/features/tasks/pages/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/pages/TasksPage'
+import { WaitingEvaluationPage } from '@/features/tasks/pages/WaitingEvaluationPage'
 import { WorkCategoriesPage } from '@/features/work-categories/pages/WorkCategoriesPage'
 import { WorkTemplatesPage } from '@/features/work-templates/pages/WorkTemplatesPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -24,9 +23,6 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/login/admin" element={<AdminLoginPage />} />
-      <Route path="/login/employee" element={<EmployeeLoginPage />} />
-      <Route path="/login/manager" element={<ManagerLoginPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route element={<ProtectedRoute allowedRoles={['admin', 'employee', 'manager']} />}>
@@ -40,24 +36,31 @@ export function AppRoutes() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/roles" element={<RolesPage />} />
           <Route path="/admin/accounts" element={<UserAccountsPage />} />
+          <Route path="/admin/organizations" element={<OrganizationsPage />} />
+          <Route path="/manager/accounts" element={<Navigate to="/admin/accounts" replace />} />
+          <Route
+            path="/manager/organizations"
+            element={<Navigate to="/admin/organizations" replace />}
+          />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
         <Route element={<AppLayout />}>
           <Route path="/employee" element={<EmployeePage />} />
+          <Route path="/employee/tasks/:taskId" element={<TaskDetailPage />} />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['manager']} />}>
         <Route element={<AppLayout />}>
           <Route path="/manager" element={<ManagerPage />} />
-          <Route path="/manager/accounts" element={<UserAccountsPage />} />
-          <Route path="/manager/organizations" element={<OrganizationsPage />} />
           <Route path="/manager/evaluation-periods" element={<EvaluationPeriodsPage />} />
           <Route path="/manager/work-categories" element={<WorkCategoriesPage />} />
           <Route path="/manager/work-templates" element={<WorkTemplatesPage />} />
           <Route path="/manager/tasks" element={<TasksPage />} />
+          <Route path="/manager/waiting-evaluation" element={<WaitingEvaluationPage />} />
+          <Route path="/manager/tasks/:taskId" element={<TaskDetailPage />} />
         </Route>
       </Route>
 

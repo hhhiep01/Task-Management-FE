@@ -4,6 +4,16 @@ import type { AxiosError } from 'axios'
 import { env } from '@/config/env'
 import type { ApiResponse } from '@/types/api'
 
+export class ApiClientError extends Error {
+  readonly status?: number
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'ApiClientError'
+    this.status = status
+  }
+}
+
 export const httpClient = axios.create({
   baseURL: env.apiBaseUrl,
   timeout: 10000,
@@ -17,6 +27,10 @@ httpClient.interceptors.request.use((config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type')
   }
 
   return config
@@ -35,6 +49,6 @@ httpClient.interceptors.response.use(
     }
 
     const message = error.response?.data?.errorMessage || error.message
-    return Promise.reject(new Error(message))
+    return Promise.reject(new ApiClientError(message, error.response?.status))
   },
 )

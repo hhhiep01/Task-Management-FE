@@ -1,6 +1,7 @@
 import { unwrapApiResponse } from '@/services/apiResponse'
 import { httpClient } from '@/services/httpClient'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateWorkCategoryRequest,
@@ -16,14 +17,22 @@ export const workCategoryApiLinks = {
   delete: (categoryId: string) => `/api/WorkCategory/${categoryId}`,
 }
 
-export type GetWorkCategoriesResponse = ApiResponse<WorkCategory[]>
+export type WorkCategoryQuery = PaginationQuery & {
+  organizationId?: string
+  isActive?: boolean
+}
+
+export type GetWorkCategoriesResponse = ApiResponse<PagedResult<WorkCategory>>
 export type GetWorkCategoryByIdResponse = ApiResponse<WorkCategory>
 export type CreateWorkCategoryResponse = ApiResponse<WorkCategory>
 export type UpdateWorkCategoryResponse = ApiResponse<WorkCategory>
 export type DeleteWorkCategoryResponse = ApiResponse<null>
 
-export async function getWorkCategories(): Promise<WorkCategory[]> {
-  const response = await httpClient.get<GetWorkCategoriesResponse>(workCategoryApiLinks.list)
+export async function getWorkCategories(query: WorkCategoryQuery, signal?: AbortSignal) {
+  const response = await httpClient.get<GetWorkCategoriesResponse>(workCategoryApiLinks.list, {
+    params: buildQueryParams(query),
+    signal,
+  })
   return unwrapApiResponse(response.data)
 }
 

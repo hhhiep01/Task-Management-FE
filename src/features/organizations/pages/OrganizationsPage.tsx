@@ -3,8 +3,11 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
+import { AdminTabs } from '@/features/admin/components/AdminTabs'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import {
@@ -20,6 +23,8 @@ const initialForm: OrganizationPayload = {
   name: '',
 }
 
+const filterKeys = [] as const
+
 export function OrganizationsPage() {
   useDocumentTitle(`Quản lý phòng ban | ${env.appName}`)
 
@@ -28,7 +33,8 @@ export function OrganizationsPage() {
   const [formError, setFormError] = useState('')
   const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false)
 
-  const organizationsQuery = useOrganizations()
+  const listState = usePagedListState(filterKeys)
+  const organizationsQuery = useOrganizations(listState.query)
   const createOrganizationMutation = useCreateOrganization()
   const updateOrganizationMutation = useUpdateOrganization()
   const deleteOrganizationMutation = useDeleteOrganization()
@@ -108,10 +114,11 @@ export function OrganizationsPage() {
 
   return (
     <section>
+      <AdminTabs />
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
-            Trưởng phòng
+            Quản trị
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-950">Quản lý phòng ban</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
@@ -127,10 +134,27 @@ export function OrganizationsPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách phòng ban</h2>
-          {organizationsQuery.data?.length ? (
+          {organizationsQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {organizationsQuery.data.length} phòng ban
+              {organizationsQuery.data.totalCount} phòng ban
             </span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row">
+          <label className="grid flex-1 gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Tìm kiếm</span>
+            <input
+              value={listState.searchInput}
+              onChange={(event) => listState.setSearchInput(event.target.value)}
+              className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+              placeholder="Mã hoặc tên phòng ban"
+            />
+          </label>
+          {listState.hasActiveFilters ? (
+            <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>
+              Xóa bộ lọc
+            </Button>
           ) : null}
         </div>
 
@@ -143,8 +167,10 @@ export function OrganizationsPage() {
         {organizationsQuery.isLoading ? (
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải phòng ban...</p>
         ) : organizationsQuery.isError ? (
-          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách phòng ban.</p>
-        ) : organizationsQuery.data?.length ? (
+          <p className="px-5 py-6 text-sm text-red-700">
+            {organizationsQuery.error instanceof Error ? organizationsQuery.error.message : 'Không tải được danh sách phòng ban.'}
+          </p>
+        ) : organizationsQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -157,7 +183,7 @@ export function OrganizationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {organizationsQuery.data.map((organization) => (
+                {organizationsQuery.data.items.map((organization) => (
                   <tr key={organization.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">
                       {organization.code}
@@ -195,7 +221,7 @@ export function OrganizationsPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có phòng ban nào.
+            {listState.hasActiveFilters ? 'Không có phòng ban phù hợp.' : 'Chưa có phòng ban nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -205,6 +231,14 @@ export function OrganizationsPage() {
             </button>
           </div>
         )}
+        {organizationsQuery.data ? (
+          <Pagination
+            {...organizationsQuery.data}
+            onPageChange={listState.setPageNumber}
+            onPageSizeChange={listState.setPageSize}
+            disabled={organizationsQuery.isFetching}
+          />
+        ) : null}
       </Card>
 
       {isOrganizationModalOpen && (

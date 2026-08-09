@@ -23,18 +23,24 @@ export function AdminPage() {
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card className="p-5">
-          <h2 className="text-lg font-semibold text-slate-950">Phân quyền người dùng</h2>
-          <p className="mt-2 text-slate-600">Tạo tài khoản và gán vai trò truy cập.</p>
+          <h2 className="text-lg font-semibold text-slate-950">Tài khoản người dùng</h2>
+          <p className="mt-2 text-slate-600">Tạo, cập nhật và quản lý tài khoản truy cập.</p>
           <Link
-            to="/admin/roles"
+            to="/admin/accounts"
             className="mt-4 inline-flex rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
           >
-            Quản lý vai trò
+            Quản lý tài khoản
           </Link>
         </Card>
         <Card className="p-5">
-          <h2 className="text-lg font-semibold text-slate-950">Cấu hình hệ thống</h2>
-          <p className="mt-2 text-slate-600">Thiết lập các cấu hình chung của ứng dụng.</p>
+          <h2 className="text-lg font-semibold text-slate-950">Phòng ban</h2>
+          <p className="mt-2 text-slate-600">Quản lý cơ cấu phòng ban trong hệ thống.</p>
+          <Link
+            to="/admin/organizations"
+            className="mt-4 inline-flex rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
+          >
+            Quản lý phòng ban
+          </Link>
         </Card>
       </div>
     </section>

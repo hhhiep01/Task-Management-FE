@@ -2,7 +2,11 @@ import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/utils/cn'
 
-const adminTabs = [{ label: 'Vai trò', href: '/admin/roles' }]
+const adminTabs = [
+  { label: 'Tài khoản', href: '/admin/accounts' },
+  { label: 'Phòng ban', href: '/admin/organizations' },
+  { label: 'Vai trò', href: '/admin/roles' },
+]
 
 export function AdminTabs() {
   return (

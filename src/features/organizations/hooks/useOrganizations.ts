@@ -7,15 +7,17 @@ import {
   updateOrganization,
 } from '../api/organizationApi'
 import type { OrganizationPayload } from '../types/organization.types'
+import type { PaginationQuery } from '@/types/api'
 
 export const organizationQueryKeys = {
   all: ['organizations'] as const,
 }
 
-export function useOrganizations() {
+export function useOrganizations(query: PaginationQuery = { pageNumber: 1, pageSize: 100 }) {
   return useQuery({
-    queryKey: organizationQueryKeys.all,
-    queryFn: getOrganizations,
+    queryKey: [...organizationQueryKeys.all, query],
+    queryFn: ({ signal }) => getOrganizations(query, signal),
+    placeholderData: (previousData) => previousData,
   })
 }
 

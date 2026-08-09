@@ -2,15 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { createRole, deleteRole, getRoles, updateRole } from '../api/roleApi'
 import type { RolePayload } from '../types/role.types'
+import type { PaginationQuery } from '@/types/api'
 
 export const roleQueryKeys = {
   all: ['roles'] as const,
 }
 
-export function useRoles() {
+export function useRoles(query: PaginationQuery = { pageNumber: 1, pageSize: 100 }) {
   return useQuery({
-    queryKey: roleQueryKeys.all,
-    queryFn: getRoles,
+    queryKey: [...roleQueryKeys.all, query],
+    queryFn: ({ signal }) => getRoles(query, signal),
+    placeholderData: (previousData) => previousData,
   })
 }
 

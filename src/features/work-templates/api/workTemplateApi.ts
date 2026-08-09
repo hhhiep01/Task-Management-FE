@@ -1,6 +1,7 @@
 import { unwrapApiResponse } from '@/services/apiResponse'
 import { httpClient } from '@/services/httpClient'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PagedResult, PaginationQuery } from '@/types/api'
+import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateWorkTemplateRequest,
@@ -16,14 +17,24 @@ export const workTemplateApiLinks = {
   delete: (templateId: string) => `/api/WorkTemplate/${templateId}`,
 }
 
-export type GetWorkTemplatesResponse = ApiResponse<WorkTemplate[]>
+export type WorkTemplateQuery = PaginationQuery & {
+  workCategoryId?: string
+  organizationId?: string
+  workType?: string
+  isActive?: boolean
+}
+
+export type GetWorkTemplatesResponse = ApiResponse<PagedResult<WorkTemplate>>
 export type GetWorkTemplateByIdResponse = ApiResponse<WorkTemplate>
 export type CreateWorkTemplateResponse = ApiResponse<WorkTemplate>
 export type UpdateWorkTemplateResponse = ApiResponse<WorkTemplate>
 export type DeleteWorkTemplateResponse = ApiResponse<null>
 
-export async function getWorkTemplates(): Promise<WorkTemplate[]> {
-  const response = await httpClient.get<GetWorkTemplatesResponse>(workTemplateApiLinks.list)
+export async function getWorkTemplates(query: WorkTemplateQuery, signal?: AbortSignal) {
+  const response = await httpClient.get<GetWorkTemplatesResponse>(workTemplateApiLinks.list, {
+    params: buildQueryParams(query),
+    signal,
+  })
   return unwrapApiResponse(response.data)
 }
 

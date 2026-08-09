@@ -3,9 +3,11 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
 import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import {
@@ -43,6 +45,8 @@ const initialForm: EvaluationPeriodPayload = {
   status: PeriodStatus.DRAFT,
 }
 
+const filterKeys = ['organizationId', 'periodType', 'status', 'fromDate', 'toDate'] as const
+
 export function EvaluationPeriodsPage() {
   useDocumentTitle(`Quản lý kỳ đánh giá | ${env.appName}`)
 
@@ -51,7 +55,8 @@ export function EvaluationPeriodsPage() {
   const [formError, setFormError] = useState('')
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false)
 
-  const periodsQuery = useEvaluationPeriods()
+  const listState = usePagedListState(filterKeys)
+  const periodsQuery = useEvaluationPeriods(listState.query)
   const organizationsQuery = useOrganizations()
   const createPeriodMutation = useCreateEvaluationPeriod()
   const updatePeriodMutation = useUpdateEvaluationPeriod()
@@ -158,11 +163,21 @@ export function EvaluationPeriodsPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách kỳ đánh giá</h2>
-          {periodsQuery.data?.length ? (
+          {periodsQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {periodsQuery.data.length} kỳ
+              {periodsQuery.data.totalCount} kỳ
             </span>
           ) : null}
+        </div>
+
+        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <FilterInput label="Tìm kiếm" value={listState.searchInput} onChange={listState.setSearchInput} placeholder="Tên kỳ đánh giá" />
+          <FilterSelect label="Phòng ban" value={listState.filters.organizationId} onChange={(value) => listState.setFilter('organizationId', value)} options={organizationsQuery.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+          <FilterSelect label="Loại kỳ" value={listState.filters.periodType} onChange={(value) => listState.setFilter('periodType', value)} options={Object.values(PeriodType).map((value) => ({ value, label: periodTypeLabels[value] }))} />
+          <FilterSelect label="Trạng thái" value={listState.filters.status} onChange={(value) => listState.setFilter('status', value)} options={Object.values(PeriodStatus).map((value) => ({ value, label: periodStatusLabels[value] }))} />
+          <FilterInput label="Từ ngày" type="date" value={listState.filters.fromDate} onChange={(value) => listState.setFilter('fromDate', value)} />
+          <FilterInput label="Đến ngày" type="date" value={listState.filters.toDate} onChange={(value) => listState.setFilter('toDate', value)} />
+          {listState.hasActiveFilters ? <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>Xóa bộ lọc</Button> : null}
         </div>
 
         {deleteError && (
@@ -174,8 +189,8 @@ export function EvaluationPeriodsPage() {
         {periodsQuery.isLoading ? (
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải kỳ đánh giá...</p>
         ) : periodsQuery.isError ? (
-          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách kỳ đánh giá.</p>
-        ) : periodsQuery.data?.length ? (
+          <p className="px-5 py-6 text-sm text-red-700">{periodsQuery.error instanceof Error ? periodsQuery.error.message : 'Không tải được danh sách kỳ đánh giá.'}</p>
+        ) : periodsQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -191,7 +206,7 @@ export function EvaluationPeriodsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {periodsQuery.data.map((period) => (
+                {periodsQuery.data.items.map((period) => (
                   <tr key={period.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">{period.name}</td>
                     <td className="px-5 py-4 text-slate-700">{period.organization.name}</td>
@@ -252,7 +267,7 @@ export function EvaluationPeriodsPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có kỳ đánh giá nào.
+            {listState.hasActiveFilters ? 'Không có kỳ đánh giá phù hợp.' : 'Chưa có kỳ đánh giá nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -262,6 +277,7 @@ export function EvaluationPeriodsPage() {
             </button>
           </div>
         )}
+        {periodsQuery.data ? <Pagination {...periodsQuery.data} onPageChange={listState.setPageNumber} onPageSizeChange={listState.setPageSize} disabled={periodsQuery.isFetching} /> : null}
       </Card>
 
       {isPeriodModalOpen && (
@@ -290,7 +306,7 @@ export function EvaluationPeriodsPage() {
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="">Chọn phòng ban</option>
-                  {organizationsQuery.data?.map((organization) => (
+                  {organizationsQuery.data?.items.map((organization) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.name}
                     </option>
@@ -404,5 +420,13 @@ export function EvaluationPeriodsPage() {
       )}
     </section>
   )
+}
+
+function FilterInput({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100" /></label>
+}
+
+function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"><option value="">Tất cả</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
 }
 

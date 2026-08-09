@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -7,20 +8,25 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
 import { useUserAccounts } from '@/features/accounts/hooks/useUserAccounts'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useEvaluationPeriods } from '@/features/evaluation-periods/hooks/useEvaluationPeriods'
 import { PeriodStatus } from '@/features/evaluation-periods/types/evaluationPeriod.types'
 import { useWorkTemplates } from '@/features/work-templates/hooks/useWorkTemplates'
-import { getWorkTypeLabel } from '@/features/work-templates/types/workTemplate.types'
+import { WorkType, getWorkTypeLabel, workTypeLabels } from '@/features/work-templates/types/workTemplate.types'
+import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import { formatDate } from '@/utils/formatDate'
 
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '../hooks/useTasks'
+import { TaskWorkflowActions } from '../components/TaskWorkflowActions'
 import {
   WorkTaskStatus,
   getTaskStatusLabel,
+  isWorkTaskStatus,
   type CreateTaskRequest,
   type Task,
   type TaskFormPayload,
@@ -39,7 +45,7 @@ const initialForm: TaskFormPayload = {
 const fieldClassName =
   'rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-teal-100'
 
-type DueFilter = 'all' | 'overdue' | 'today' | 'upcoming' | 'no_due'
+const taskFilterKeys = ['periodId', 'workTemplateId', 'organizationId', 'assignedBy', 'assigneeId', 'workType', 'status', 'dueDateFrom', 'dueDateTo'] as const
 
 function getTodayInputValue() {
   return new Date().toISOString().slice(0, 10)
@@ -112,6 +118,14 @@ function getStatusVariant(task: Task) {
     return 'neutral' as const
   }
 
+  if (task.status === WorkTaskStatus.WAITING_EVALUATION) {
+    return 'warning' as const
+  }
+
+  if (task.status === WorkTaskStatus.REVISION_REQUIRED) {
+    return 'warning' as const
+  }
+
   if (task.status === WorkTaskStatus.IN_PROGRESS) {
     return 'primary' as const
   }
@@ -143,32 +157,6 @@ function getDueBadge(task: Task) {
   }
 
   return { label: formatDate(task.dueDate ?? task.due), variant: 'info' as const }
-}
-
-function matchesDueFilter(task: Task, filter: DueFilter) {
-  if (filter === 'all') {
-    return true
-  }
-
-  const daysUntilDue = getDaysUntilDue(task)
-
-  if (filter === 'no_due') {
-    return daysUntilDue === null
-  }
-
-  if (isClosedTask(task) || daysUntilDue === null) {
-    return false
-  }
-
-  if (filter === 'overdue') {
-    return daysUntilDue < 0
-  }
-
-  if (filter === 'today') {
-    return daysUntilDue === 0
-  }
-
-  return daysUntilDue > 0
 }
 
 type ReadOnlyFieldProps = {
@@ -223,12 +211,13 @@ function FieldError({ show, children }: { show: boolean; children: ReactNode }) 
 
 type TaskMobileCardProps = {
   task: Task
+  onView: (task: Task) => void
   onEdit: (task: Task) => void
   onDelete: (task: Task) => void
   isDeleting: boolean
 }
 
-function TaskMobileCard({ task, onEdit, onDelete, isDeleting }: TaskMobileCardProps) {
+function TaskMobileCard({ task, onView, onEdit, onDelete, isDeleting }: TaskMobileCardProps) {
   const dueBadge = getDueBadge(task)
 
   return (
@@ -264,6 +253,10 @@ function TaskMobileCard({ task, onEdit, onDelete, isDeleting }: TaskMobileCardPr
       </div>
 
       <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-3">
+        <TaskWorkflowActions task={task} compact />
+        <Button type="button" variant="ghost" size="sm" onClick={() => onView(task)}>
+          Xem
+        </Button>
         <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(task)}>
           Sửa
         </Button>
@@ -284,21 +277,18 @@ function TaskMobileCard({ task, onEdit, onDelete, isDeleting }: TaskMobileCardPr
 export function TasksPage() {
   useDocumentTitle(`Giao việc | ${env.appName}`)
 
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [form, setForm] = useState<TaskFormPayload>(initialForm)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [formError, setFormError] = useState('')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [assigneeFilter, setAssigneeFilter] = useState('all')
-  const [periodFilter, setPeriodFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [dueFilter, setDueFilter] = useState<DueFilter>('all')
-
-  const tasksQuery = useTasks()
+  const listState = usePagedListState(taskFilterKeys)
+  const tasksQuery = useTasks(listState.query)
   const periodsQuery = useEvaluationPeriods()
   const templatesQuery = useWorkTemplates()
   const accountsQuery = useUserAccounts()
+  const organizationsQuery = useOrganizations()
   const createTaskMutation = useCreateTask()
   const updateTaskMutation = useUpdateTask()
   const deleteTaskMutation = useDeleteTask()
@@ -307,17 +297,17 @@ export function TasksPage() {
   const canCreateTask = user?.roleCode === 'TP' || user?.roleCode === 'PP'
   const modalTitle = editingTask ? 'Cập nhật công việc' : 'Giao công việc'
   const selectedTemplate = useMemo(
-    () => templatesQuery.data?.find((template) => template.id === form.workTemplateId),
+    () => templatesQuery.data?.items.find((template) => template.id === form.workTemplateId),
     [form.workTemplateId, templatesQuery.data],
   )
   const templateForRequest = selectedTemplate ?? editingTask?.workTemplate
   const activePeriods = useMemo(
-    () => periodsQuery.data?.filter((period) => period.status === PeriodStatus.ACTIVE) ?? [],
+    () => periodsQuery.data?.items.filter((period) => period.status === PeriodStatus.ACTIVE) ?? [],
     [periodsQuery.data],
   )
   const assigneeOptions = useMemo(
     () =>
-      accountsQuery.data?.filter((account) => account.role.code.toUpperCase() !== 'ADMIN') ?? [],
+      accountsQuery.data?.items.filter((account) => account.role.code.toUpperCase() !== 'ADMIN') ?? [],
     [accountsQuery.data],
   )
   const formApiError = useMemo(() => {
@@ -327,54 +317,17 @@ export function TasksPage() {
   const deleteError =
     deleteTaskMutation.error instanceof Error ? deleteTaskMutation.error.message : ''
 
-  const filteredTasks = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-
-    return (tasksQuery.data ?? []).filter((task) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        [
-          task.title,
-          task.description,
-          getAssigneeName(task),
-          getPeriodName(task),
-          getTemplateName(task),
-        ]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(normalizedSearch))
-      const matchesAssignee = assigneeFilter === 'all' || getAssigneeId(task) === assigneeFilter
-      const matchesPeriod = periodFilter === 'all' || getPeriodId(task) === periodFilter
-      const matchesStatus = statusFilter === 'all' || task.status === statusFilter
-
-      return (
-        matchesSearch &&
-        matchesAssignee &&
-        matchesPeriod &&
-        matchesStatus &&
-        matchesDueFilter(task, dueFilter)
-      )
-    })
-  }, [assigneeFilter, dueFilter, periodFilter, searchTerm, statusFilter, tasksQuery.data])
+  const tasks = useMemo(() => tasksQuery.data?.items ?? [], [tasksQuery.data?.items])
 
   const overdueCount = useMemo(
     () =>
-      (tasksQuery.data ?? []).filter((task) => {
+      tasks.filter((task) => {
         const daysUntilDue = getDaysUntilDue(task)
         return !isClosedTask(task) && daysUntilDue !== null && daysUntilDue < 0
       }).length,
-    [tasksQuery.data],
+    [tasks],
   )
-  const hasActiveFilters =
-    searchTerm || assigneeFilter !== 'all' || periodFilter !== 'all' || statusFilter !== 'all' || dueFilter !== 'all'
   const showFieldErrors = Boolean(formError)
-
-  const resetFilters = () => {
-    setSearchTerm('')
-    setAssigneeFilter('all')
-    setPeriodFilter('all')
-    setStatusFilter('all')
-    setDueFilter('all')
-  }
 
   const closeModal = () => {
     setForm({ ...initialForm, assignedDate: getTodayInputValue() })
@@ -434,12 +387,7 @@ export function TasksPage() {
         templateForRequest?.difficultyPercent ?? editingTask?.difficultyPercent ?? 100,
       progressPercent: editingTask?.progressPercent ?? 0,
       resultDescription: editingTask?.resultDescription ?? null,
-      status:
-        editingTask?.status === WorkTaskStatus.IN_PROGRESS ||
-        editingTask?.status === WorkTaskStatus.COMPLETED ||
-        editingTask?.status === WorkTaskStatus.CANCELLED
-          ? editingTask.status
-          : WorkTaskStatus.NEW,
+      status: isWorkTaskStatus(editingTask?.status) ? editingTask.status : WorkTaskStatus.NEW,
     }
 
     if (
@@ -479,6 +427,10 @@ export function TasksPage() {
     }
 
     await deleteTaskMutation.mutateAsync(task.id)
+  }
+
+  const openDetailPage = (task: Task) => {
+    void navigate(`/manager/tasks/${task.id}`)
   }
 
   const columns: DataTableColumn<Task>[] = [
@@ -548,6 +500,10 @@ export function TasksPage() {
       className: 'whitespace-nowrap',
       render: (task) => (
         <div className="flex justify-end gap-2">
+          <TaskWorkflowActions task={task} compact />
+          <Button type="button" variant="ghost" size="sm" onClick={() => openDetailPage(task)}>
+            Xem
+          </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => openEditModal(task)}>
             Sửa
           </Button>
@@ -566,7 +522,7 @@ export function TasksPage() {
   ]
 
   return (
-    <section className="grid gap-6">
+    <section className="grid w-full min-w-0 max-w-full gap-6">
       <PageHeader
         eyebrow="Trưởng phòng"
         title="Giao việc"
@@ -586,7 +542,7 @@ export function TasksPage() {
         </p>
       )}
 
-      <Card className="p-5">
+      <Card className="w-full min-w-0 max-w-full p-5">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
           <div>
             <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
@@ -600,16 +556,16 @@ export function TasksPage() {
             <Badge variant={overdueCount ? 'danger' : 'success'}>
               {overdueCount} quá hạn
             </Badge>
-            <Badge variant="primary">{filteredTasks.length} kết quả</Badge>
+            <Badge variant="primary">{tasksQuery.data?.totalCount ?? 0} kết quả</Badge>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto]">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">Tìm kiếm</span>
             <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              value={listState.searchInput}
+              onChange={(event) => listState.setSearchInput(event.target.value)}
               className={fieldClassName}
               placeholder="Tên công việc, mô tả, người nhận..."
             />
@@ -618,11 +574,11 @@ export function TasksPage() {
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">Người nhận</span>
             <select
-              value={assigneeFilter}
-              onChange={(event) => setAssigneeFilter(event.target.value)}
+              value={listState.filters.assigneeId}
+              onChange={(event) => listState.setFilter('assigneeId', event.target.value)}
               className={fieldClassName}
             >
-              <option value="all">Tất cả</option>
+              <option value="">Tất cả</option>
               {assigneeOptions.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.fullName}
@@ -634,12 +590,12 @@ export function TasksPage() {
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">Kỳ đánh giá</span>
             <select
-              value={periodFilter}
-              onChange={(event) => setPeriodFilter(event.target.value)}
+              value={listState.filters.periodId}
+              onChange={(event) => listState.setFilter('periodId', event.target.value)}
               className={fieldClassName}
             >
-              <option value="all">Tất cả</option>
-              {periodsQuery.data?.map((period) => (
+              <option value="">Tất cả</option>
+              {periodsQuery.data?.items.map((period) => (
                 <option key={period.id} value={period.id}>
                   {period.name}
                 </option>
@@ -650,11 +606,11 @@ export function TasksPage() {
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">Trạng thái</span>
             <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              value={listState.filters.status}
+              onChange={(event) => listState.setFilter('status', event.target.value)}
               className={fieldClassName}
             >
-              <option value="all">Tất cả</option>
+              <option value="">Tất cả</option>
               {Object.values(WorkTaskStatus).map((status) => (
                 <option key={status} value={status}>
                   {getTaskStatusLabel(status)}
@@ -664,27 +620,30 @@ export function TasksPage() {
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-[var(--color-text)]">Hạn xử lý</span>
+            <span className="text-sm font-medium text-[var(--color-text)]">Danh mục</span>
             <select
-              value={dueFilter}
-              onChange={(event) => setDueFilter(event.target.value as DueFilter)}
+              value={listState.filters.workTemplateId}
+              onChange={(event) => listState.setFilter('workTemplateId', event.target.value)}
               className={fieldClassName}
             >
-              <option value="all">Tất cả</option>
-              <option value="overdue">Quá hạn</option>
-              <option value="today">Hôm nay</option>
-              <option value="upcoming">Sắp tới</option>
-              <option value="no_due">Chưa có hạn</option>
+              <option value="">Tất cả</option>
+              {templatesQuery.data?.items.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
             </select>
           </label>
+
+          <TaskFilterSelect label="Phòng ban" value={listState.filters.organizationId} onChange={(value) => listState.setFilter('organizationId', value)} options={organizationsQuery.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+          <TaskFilterSelect label="Người giao" value={listState.filters.assignedBy} onChange={(value) => listState.setFilter('assignedBy', value)} options={accountsQuery.data?.items.map((item) => ({ value: item.id, label: item.fullName })) ?? []} />
+          <TaskFilterSelect label="Loại công việc" value={listState.filters.workType} onChange={(value) => listState.setFilter('workType', value)} options={Object.values(WorkType).map((value) => ({ value, label: workTypeLabels[value] }))} />
+          <TaskFilterDate label="Hạn từ ngày" value={listState.filters.dueDateFrom} onChange={(value) => listState.setFilter('dueDateFrom', value)} />
+          <TaskFilterDate label="Hạn đến ngày" value={listState.filters.dueDateTo} onChange={(value) => listState.setFilter('dueDateTo', value)} />
 
           <div className="flex items-end">
             <Button
               type="button"
               variant="secondary"
               className="w-full"
-              onClick={resetFilters}
-              disabled={!hasActiveFilters}
+              onClick={listState.clearFilters}
+              disabled={!listState.hasActiveFilters}
             >
               Xóa lọc
             </Button>
@@ -706,52 +665,48 @@ export function TasksPage() {
       ) : tasksQuery.isError ? (
         <EmptyState
           title="Không tải được danh sách công việc"
-          description="Vui lòng kiểm tra kết nối hoặc thử lại sau."
+          description={tasksQuery.error instanceof Error ? tasksQuery.error.message : 'Vui lòng kiểm tra kết nối hoặc thử lại sau.'}
         />
-      ) : tasksQuery.data?.length ? (
+      ) : tasks.length ? (
         <>
-          <div className="hidden md:block">
+          <div className="hidden w-full min-w-0 max-w-full md:block">
             <DataTable
               title="Danh sách công việc"
-              items={filteredTasks}
+              items={tasks}
               columns={columns}
               getRowKey={(task) => task.id}
-              countLabel={`${filteredTasks.length}/${tasksQuery.data.length} công việc`}
+              countLabel={`${tasksQuery.data?.totalCount ?? 0} công việc`}
               minWidthClassName="min-w-[1180px]"
               emptyMessage="Không có công việc nào khớp với bộ lọc hiện tại."
             />
           </div>
 
           <div className="grid gap-3 md:hidden">
-            {filteredTasks.length ? (
-              filteredTasks.map((task) => (
+            {tasks.map((task) => (
                 <TaskMobileCard
                   key={task.id}
                   task={task}
+                  onView={openDetailPage}
                   onEdit={openEditModal}
                   onDelete={handleDelete}
                   isDeleting={deleteTaskMutation.isPending}
                 />
-              ))
-            ) : (
-              <EmptyState
-                title="Không có kết quả phù hợp"
-                description="Hãy thử đổi từ khóa tìm kiếm hoặc nới rộng bộ lọc."
-                action={
-                  <Button type="button" variant="secondary" onClick={resetFilters}>
-                    Xóa bộ lọc
-                  </Button>
-                }
-              />
-            )}
+              ))}
           </div>
+          {tasksQuery.data ? (
+            <Card className="overflow-hidden">
+              <Pagination {...tasksQuery.data} onPageChange={listState.setPageNumber} onPageSizeChange={listState.setPageSize} disabled={tasksQuery.isFetching} />
+            </Card>
+          ) : null}
         </>
       ) : (
         <EmptyState
-          title="Chưa có công việc nào"
-          description="Khi có công việc được giao, danh sách sẽ hiển thị tại đây."
+          title={listState.hasActiveFilters ? 'Không có kết quả phù hợp' : 'Chưa có công việc nào'}
+          description={listState.hasActiveFilters ? 'Hãy thử thay đổi hoặc xóa bộ lọc.' : 'Khi có công việc được giao, danh sách sẽ hiển thị tại đây.'}
           action={
-            canCreateTask ? (
+            listState.hasActiveFilters ? (
+              <Button type="button" variant="secondary" onClick={listState.clearFilters}>Xóa bộ lọc</Button>
+            ) : canCreateTask ? (
               <Button type="button" onClick={openCreateModal}>
                 Giao công việc đầu tiên
               </Button>
@@ -809,7 +764,7 @@ export function TasksPage() {
                   className={fieldClassName}
                 >
                   <option value="">Chọn danh mục công việc</option>
-                  {templatesQuery.data?.map((template) => (
+                  {templatesQuery.data?.items.map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name}
                     </option>
@@ -947,5 +902,26 @@ export function TasksPage() {
         </form>
       </Modal>
     </section>
+  )
+}
+
+function TaskFilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-[var(--color-text)]">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={fieldClassName}>
+        <option value="">Tất cả</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function TaskFilterDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-[var(--color-text)]">{label}</span>
+      <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className={fieldClassName} />
+    </label>
   )
 }

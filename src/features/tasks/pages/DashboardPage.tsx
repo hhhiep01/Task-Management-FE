@@ -60,6 +60,14 @@ function getStatusTone(status: string) {
     return 'bg-[var(--color-primary)]'
   }
 
+  if (status === WorkTaskStatus.WAITING_EVALUATION) {
+    return 'bg-[var(--color-warning)]'
+  }
+
+  if (status === WorkTaskStatus.REVISION_REQUIRED) {
+    return 'bg-[var(--color-warning)]'
+  }
+
   if (status === WorkTaskStatus.CANCELLED) {
     return 'bg-slate-400'
   }
@@ -108,6 +116,8 @@ export function DashboardPage() {
   const statusRows = [
     WorkTaskStatus.NEW,
     WorkTaskStatus.IN_PROGRESS,
+    WorkTaskStatus.WAITING_EVALUATION,
+    WorkTaskStatus.REVISION_REQUIRED,
     WorkTaskStatus.COMPLETED,
     WorkTaskStatus.CANCELLED,
   ].map((status) => {

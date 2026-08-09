@@ -3,11 +3,13 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
-import { useAuth } from '@/features/auth/hooks/useAuth'
+import { AdminTabs } from '@/features/admin/components/AdminTabs'
 import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useRoles } from '@/features/roles/hooks/useRoles'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePagedListState } from '@/hooks/usePagedListState'
 import type { Role } from '@/features/roles/types/role.types'
 import { formatDate } from '@/utils/formatDate'
 
@@ -27,16 +29,18 @@ const initialForm: UserAccountForm = {
   organizationId: '',
 }
 
+const filterKeys = ['roleId', 'organizationId'] as const
+
 export function UserAccountsPage() {
   useDocumentTitle(`Quản lý tài khoản | ${env.appName}`)
 
-  const { user } = useAuth()
   const [form, setForm] = useState<UserAccountForm>(initialForm)
   const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null)
   const [formError, setFormError] = useState('')
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
 
-  const accountsQuery = useUserAccounts()
+  const listState = usePagedListState(filterKeys)
+  const accountsQuery = useUserAccounts(listState.query)
   const rolesQuery = useRoles()
   const organizationsQuery = useOrganizations()
   const createAccountMutation = useCreateUserAccount()
@@ -44,12 +48,10 @@ export function UserAccountsPage() {
   const deleteAccountMutation = useDeleteUserAccount()
 
   const isSubmitting = createAccountMutation.isPending || updateAccountMutation.isPending
-  const isManager = user?.role === 'manager'
-  const canEditPassword = !editingAccount || !isManager
   const modalTitle = editingAccount ? 'Cập nhật tài khoản' : 'Tạo tài khoản'
   const roleOptions = useMemo(
     () =>
-      rolesQuery.data?.filter((role) => {
+      rolesQuery.data?.items.filter((role) => {
         const roleCode = getRoleText(role.code)
         const roleName = getRoleText(role.name)
 
@@ -122,7 +124,7 @@ export function UserAccountsPage() {
           email: payload.email,
           roleId: payload.roleId,
           organizationId: payload.organizationId,
-          ...(canEditPassword && payload.password ? { password: payload.password } : {}),
+          ...(payload.password ? { password: payload.password } : {}),
         },
       })
     } else {
@@ -144,10 +146,11 @@ export function UserAccountsPage() {
 
   return (
     <section>
+      <AdminTabs />
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
-            {user?.role === 'admin' ? 'Quản trị' : 'Trưởng phòng'}
+            Quản trị
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-950">Quản lý tài khoản</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
@@ -163,10 +166,47 @@ export function UserAccountsPage() {
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách tài khoản</h2>
-          {accountsQuery.data?.length ? (
+          {accountsQuery.data ? (
             <span className="text-sm font-medium text-slate-500">
-              {accountsQuery.data.length} tài khoản
+              {accountsQuery.data.totalCount} tài khoản
             </span>
+          ) : null}
+        </div>
+
+        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_220px_220px_auto]">
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Tìm kiếm</span>
+            <input
+              value={listState.searchInput}
+              onChange={(event) => listState.setSearchInput(event.target.value)}
+              className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+              placeholder="Họ tên hoặc email"
+            />
+          </label>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Vai trò</span>
+            <select
+              value={listState.filters.roleId}
+              onChange={(event) => listState.setFilter('roleId', event.target.value)}
+              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+            >
+              <option value="">Tất cả</option>
+              {rolesQuery.data?.items.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Phòng ban</span>
+            <select
+              value={listState.filters.organizationId}
+              onChange={(event) => listState.setFilter('organizationId', event.target.value)}
+              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+            >
+              <option value="">Tất cả</option>
+              {organizationsQuery.data?.items.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+            </select>
+          </label>
+          {listState.hasActiveFilters ? (
+            <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>Xóa bộ lọc</Button>
           ) : null}
         </div>
 
@@ -179,8 +219,10 @@ export function UserAccountsPage() {
         {accountsQuery.isLoading ? (
           <p className="px-5 py-6 text-sm text-slate-600">Đang tải tài khoản...</p>
         ) : accountsQuery.isError ? (
-          <p className="px-5 py-6 text-sm text-red-700">Không tải được danh sách tài khoản.</p>
-        ) : accountsQuery.data?.length ? (
+          <p className="px-5 py-6 text-sm text-red-700">
+            {accountsQuery.error instanceof Error ? accountsQuery.error.message : 'Không tải được danh sách tài khoản.'}
+          </p>
+        ) : accountsQuery.data?.items.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -194,7 +236,7 @@ export function UserAccountsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {accountsQuery.data.map((account) => (
+                {accountsQuery.data.items.map((account) => (
                   <tr key={account.id} className="bg-white">
                     <td className="px-5 py-4 font-semibold text-slate-950">
                       {account.fullName}
@@ -235,7 +277,7 @@ export function UserAccountsPage() {
           </div>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
-            Chưa có tài khoản nào.
+            {listState.hasActiveFilters ? 'Không có tài khoản phù hợp.' : 'Chưa có tài khoản nào.'}
             <button
               type="button"
               onClick={openCreateModal}
@@ -245,6 +287,14 @@ export function UserAccountsPage() {
             </button>
           </div>
         )}
+        {accountsQuery.data ? (
+          <Pagination
+            {...accountsQuery.data}
+            onPageChange={listState.setPageNumber}
+            onPageSizeChange={listState.setPageSize}
+            disabled={accountsQuery.isFetching}
+          />
+        ) : null}
       </Card>
 
       {isAccountModalOpen && (
@@ -288,22 +338,20 @@ export function UserAccountsPage() {
                 />
               </label>
 
-              {canEditPassword && (
-                <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">
-                    Mật khẩu {editingAccount ? '(để trống nếu không đổi)' : ''}
-                  </span>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, password: event.target.value }))
-                    }
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
-                    placeholder="Nhập mật khẩu"
-                  />
-                </label>
-              )}
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-700">
+                  Mật khẩu {editingAccount ? '(để trống nếu không đổi)' : ''}
+                </span>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+                  placeholder="Nhập mật khẩu"
+                />
+              </label>
 
               <label className="grid gap-2">
                 <span className="text-sm font-medium text-slate-700">Vai trò</span>
@@ -333,7 +381,7 @@ export function UserAccountsPage() {
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="">Chọn phòng ban</option>
-                  {organizationsQuery.data?.map((organization) => (
+                  {organizationsQuery.data?.items.map((organization) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.name}
                     </option>

@@ -17,7 +17,7 @@ const variantClasses: Record<CardVariant, string> = {
 export function Card({ className, variant = 'default', ...props }: CardProps) {
   return (
     <div
-      className={cn('rounded-[var(--radius-lg)] border', variantClasses[variant], className)}
+      className={cn('rounded-[var(--radius-md)] border', variantClasses[variant], className)}
       {...props}
     />
   )

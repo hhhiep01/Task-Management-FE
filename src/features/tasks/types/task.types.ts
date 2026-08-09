@@ -5,6 +5,8 @@ import type { WorkTemplate } from '@/features/work-templates/types/workTemplate.
 export const WorkTaskStatus = {
   NEW: 'NEW',
   IN_PROGRESS: 'IN_PROGRESS',
+  WAITING_EVALUATION: 'WAITING_EVALUATION',
+  REVISION_REQUIRED: 'REVISION_REQUIRED',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 } as const
@@ -16,8 +18,14 @@ export type TaskStatus = WorkTaskStatus | string
 export const taskStatusLabels: Record<WorkTaskStatus, string> = {
   [WorkTaskStatus.NEW]: 'Mới',
   [WorkTaskStatus.IN_PROGRESS]: 'Đang thực hiện',
+  [WorkTaskStatus.WAITING_EVALUATION]: 'Chờ đánh giá',
+  [WorkTaskStatus.REVISION_REQUIRED]: 'Cần chỉnh sửa',
   [WorkTaskStatus.COMPLETED]: 'Hoàn thành',
   [WorkTaskStatus.CANCELLED]: 'Đã hủy',
+}
+
+export function isWorkTaskStatus(status?: string | null): status is WorkTaskStatus {
+  return Object.values(WorkTaskStatus).includes(status as WorkTaskStatus)
 }
 
 export function getTaskStatusLabel(status?: string | null) {
@@ -94,3 +102,8 @@ export type TaskSummary = {
 export type CreateTaskRequest = TaskRequest
 
 export type UpdateTaskRequest = TaskRequest
+
+export type UpdateTaskResultRequest = {
+  progressPercent: number
+  resultDescription: string
+}

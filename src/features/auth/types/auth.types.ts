@@ -1,7 +1,5 @@
 export type UserRole = 'guest' | 'employee' | 'manager' | 'admin'
 
-export type LoginRole = Exclude<UserRole, 'guest'>
-
 export type AuthUser = {
   id: string
   name: string
