@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { cn } from '@/utils/cn'
+
 import { Card } from './Card'
 
 type DataTableColumn<TItem> = {
@@ -23,6 +25,7 @@ type DataTableProps<TItem> = {
   emptyMessage?: ReactNode
   minWidthClassName?: string
   toolbar?: ReactNode
+  rowClassName?: string | ((item: TItem) => string)
 }
 
 export function DataTable<TItem>({
@@ -38,6 +41,7 @@ export function DataTable<TItem>({
   emptyMessage = 'Chưa có dữ liệu.',
   minWidthClassName = 'min-w-[720px]',
   toolbar,
+  rowClassName,
 }: DataTableProps<TItem>) {
   return (
     <Card className="min-w-0 w-full max-w-full overflow-hidden">
@@ -74,7 +78,13 @@ export function DataTable<TItem>({
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
               {items.map((item) => (
-                <tr key={getRowKey(item)} className="bg-[var(--color-surface)]">
+                <tr
+                  key={getRowKey(item)}
+                  className={cn(
+                    'bg-[var(--color-surface)]',
+                    typeof rowClassName === 'function' ? rowClassName(item) : rowClassName,
+                  )}
+                >
                   {columns.map((column) => (
                     <td key={column.key} className={`px-4 py-3 ${column.className ?? ''}`}>
                       {column.render(item)}

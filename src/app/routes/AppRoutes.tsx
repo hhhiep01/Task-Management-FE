@@ -6,11 +6,13 @@ import { AdminPage } from '@/features/admin/pages/AdminPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { ProtectedRoute } from '@/features/auth/routes/ProtectedRoute'
 import { RoleRedirect } from '@/features/auth/routes/RoleRedirect'
+import { CommonCriteriaPage } from '@/features/common-criteria/pages/CommonCriteriaPage'
 import { EmployeePage } from '@/features/employee/pages/EmployeePage'
 import { EvaluationPeriodsPage } from '@/features/evaluation-periods/pages/EvaluationPeriodsPage'
 import { ManagerPage } from '@/features/manager/pages/ManagerPage'
 import { OrganizationsPage } from '@/features/organizations/pages/OrganizationsPage'
 import { RolesPage } from '@/features/roles/pages/RolesPage'
+import { SelfEvaluationPage } from '@/features/self-evaluations/pages/SelfEvaluationPage'
 import { TaskDetailPage } from '@/features/tasks/pages/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/pages/TasksPage'
 import { WaitingEvaluationPage } from '@/features/tasks/pages/WaitingEvaluationPage'
@@ -28,6 +30,7 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['admin', 'employee', 'manager']} />}>
         <Route element={<AppLayout />}>
           <Route index element={<RoleRedirect />} />
+          <Route path="/common-criteria" element={<CommonCriteriaPage />} />
         </Route>
       </Route>
 
@@ -48,6 +51,7 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
         <Route element={<AppLayout />}>
           <Route path="/employee" element={<EmployeePage />} />
+          <Route path="/employee/self-evaluation" element={<SelfEvaluationPage />} />
           <Route path="/employee/tasks/:taskId" element={<TaskDetailPage />} />
         </Route>
       </Route>

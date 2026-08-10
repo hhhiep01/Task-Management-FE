@@ -23,8 +23,8 @@ export function TaskDetailContent({ task }: { task: Task }) {
     <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
       <main className="grid min-w-0 gap-4">
         <TaskContent task={task} />
-        <TaskWorkflowActions task={task} />
         <TaskEvidenceSection task={task} />
+        <TaskWorkflowActions task={task} />
         <TaskEvaluationHistory taskId={task.id} />
       </main>
       <aside className="order-first min-w-0 xl:order-last">

@@ -9,7 +9,7 @@ export type WorkType = (typeof WorkType)[keyof typeof WorkType]
 
 export const workTypeLabels: Record<WorkType, string> = {
   [WorkType.REGULAR]: 'Thường xuyên',
-  [WorkType.AD_HOC]: 'Đột xuất',
+  [WorkType.AD_HOC]: 'Phát sinh',
 }
 
 export function getWorkTypeLabel(value?: string | null) {

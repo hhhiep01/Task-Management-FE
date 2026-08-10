@@ -135,32 +135,39 @@ export function TaskEvaluationAction({ task, onEvaluated }: { task: Task; onEval
         footer={footer}
       >
         {confirmApproval ? (
-          <div className="grid gap-3">
-            <p className="text-sm leading-6 text-[var(--color-text)]">
+          <div className="grid min-w-0 gap-3">
+            <p className="min-w-0 break-words text-sm leading-6 text-[var(--color-text)]">
               Xác nhận kết quả của <strong className="font-semibold text-[var(--color-text-strong)]">“{task.title}”</strong> đạt yêu cầu. Hệ thống sẽ hoàn thành công việc và ghi nhận điểm đánh giá.
             </p>
             {mutationMessage ? <ErrorMessage>{mutationMessage}{conflictMessage}</ErrorMessage> : null}
           </div>
         ) : (
-          <form id={formId} className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)] lg:gap-0" onSubmit={handleSubmit}>
-            <div className="min-w-0 lg:pr-5">
+          <form
+            id={formId}
+            className="grid w-full min-w-0 max-w-full grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-0"
+            onSubmit={handleSubmit}
+          >
+            <div className="w-full min-w-0 max-w-full lg:pr-5">
               <ReviewContext task={task} detailPath={detailPath} />
             </div>
 
-            <section className="grid content-start gap-3 border-t border-[var(--color-border)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-labelledby="evaluation-fields-title">
-              <div>
-                <h3 id="evaluation-fields-title" className="font-semibold text-[var(--color-text-strong)]">Đánh giá của quản lý</h3>
-                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Đánh giá mức độ hoàn thành và chất lượng kết quả nhân viên đã báo cáo.</p>
+            <section
+              className="grid w-full min-w-0 max-w-full content-start gap-3 border-t border-[var(--color-border)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0"
+              aria-labelledby="evaluation-fields-title"
+            >
+              <div className="min-w-0">
+                <h3 id="evaluation-fields-title" className="break-words font-semibold text-[var(--color-text-strong)]">Đánh giá của quản lý</h3>
+                <p className="mt-1 break-words whitespace-normal text-sm leading-5 text-[var(--color-text-muted)]">Đánh giá mức độ hoàn thành và chất lượng kết quả nhân viên đã báo cáo.</p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <PercentField label="Mức độ hoàn thành" value={progressPercent} onChange={setProgressPercent} disabled={mutation.isPending} />
                 <PercentField label="Chất lượng" value={qualityPercent} onChange={setQualityPercent} disabled={mutation.isPending} />
               </div>
 
-              <fieldset className="grid gap-2">
+              <fieldset className="grid min-w-0 gap-2">
                 <legend className="text-sm font-medium text-[var(--color-text)]">Quyết định</legend>
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   <DecisionOption
                     name={`decision-${task.id}`}
                     value={TaskEvaluationDecision.APPROVED}
@@ -182,14 +189,14 @@ export function TaskEvaluationAction({ task, onEvaluated }: { task: Task; onEval
                 </div>
               </fieldset>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">Nhận xét</span>
                 <textarea
                   rows={3}
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   disabled={mutation.isPending}
-                  className="min-h-24 resize-y rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]"
+                  className="min-h-24 w-full min-w-0 max-w-full resize-y rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]"
                   placeholder="Nhập nhận xét về kết quả hoặc nội dung cần chỉnh sửa..."
                 />
                 {decision === TaskEvaluationDecision.REVISION_REQUIRED ? (
@@ -199,7 +206,7 @@ export function TaskEvaluationAction({ task, onEvaluated }: { task: Task; onEval
             </section>
 
             {validationError || mutationMessage ? (
-              <div className="grid gap-2 lg:col-span-2 lg:pt-1">
+              <div className="grid min-w-0 gap-2 lg:col-span-2 lg:pt-1">
                 {validationError ? <ErrorMessage>{validationError}</ErrorMessage> : null}
                 {mutationMessage ? <ErrorMessage>{mutationMessage}{conflictMessage}</ErrorMessage> : null}
               </div>
@@ -213,29 +220,45 @@ export function TaskEvaluationAction({ task, onEvaluated }: { task: Task; onEval
 
 function ReviewContext({ task, detailPath }: { task: Task; detailPath: string }) {
   return (
-    <div className="grid gap-4">
-      <section aria-labelledby="task-review-title">
+    <div className="grid w-full min-w-0 max-w-full gap-4">
+      <section className="min-w-0 max-w-full" aria-labelledby="task-review-title">
         <p className="text-xs font-medium text-[var(--color-text-muted)]">Công việc cần đánh giá</p>
-        <h3 id="task-review-title" className="mt-1 text-lg font-semibold leading-6 text-[var(--color-text-strong)]">{task.title}</h3>
-        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">{task.description || 'Chưa có mô tả.'}</p>
+        <h3
+          id="task-review-title"
+          className="mt-1 min-w-0 max-w-full break-words whitespace-normal text-lg font-semibold leading-6 text-[var(--color-text-strong)]"
+        >
+          {task.title}
+        </h3>
+        <p className="mt-1.5 min-w-0 max-w-full break-words whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
+          {task.description || 'Chưa có mô tả.'}
+        </p>
 
-        <dl className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-3">
+        <dl className="mt-3 grid min-w-0 gap-x-5 gap-y-2 sm:grid-cols-3">
           <MetadataRow label="Hạn hoàn thành" value={formatDate(task.dueDate ?? task.due)} />
           <MetadataRow label="Điểm cơ bản" value={task.baseScore} />
           <MetadataRow label="Độ khó" value={task.difficultyPercent === undefined ? undefined : `${task.difficultyPercent}%`} />
         </dl>
 
-        <div className="mt-3">
+        <div className="mt-3 min-w-0 max-w-full">
           <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Kết quả mong đợi</h4>
-          <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">{task.expectedOutput || 'Chưa có nội dung.'}</p>
+          <p className="mt-1 min-w-0 max-w-full break-words whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
+            {task.expectedOutput || 'Chưa có nội dung.'}
+          </p>
         </div>
       </section>
 
-      <section className="border-t border-[var(--color-border)] pt-3" aria-labelledby="employee-result-title">
+      <section
+        className="min-w-0 max-w-full border-t border-[var(--color-border)] pt-3"
+        aria-labelledby="employee-result-title"
+      >
         <h3 id="employee-result-title" className="font-semibold text-[var(--color-text-strong)]">Kết quả thực hiện</h3>
-        <div className="mt-2"><TaskProgress value={getProgress(task)} label="Tiến độ" /></div>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">{task.resultDescription || 'Nhân viên chưa cập nhật nội dung kết quả.'}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm font-medium">
+        <div className="mt-2 w-full min-w-0 max-w-full">
+          <TaskProgress value={getProgress(task)} label="Tiến độ" />
+        </div>
+        <p className="mt-2 min-w-0 max-w-full break-words whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
+          {task.resultDescription || 'Nhân viên chưa cập nhật nội dung kết quả.'}
+        </p>
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-sm font-medium">
           <Link to={detailPath} className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Xem chi tiết</Link>
           <Link to={`${detailPath}#task-evidence`} className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Xem minh chứng</Link>
         </div>
@@ -246,10 +269,10 @@ function ReviewContext({ task, detailPath }: { task: Task; detailPath: string })
 
 function PercentField({ label, value, onChange, disabled }: { label: string; value: number; onChange: (value: number) => void; disabled: boolean }) {
   return (
-    <label className="grid gap-2">
-      <span className="text-sm font-medium text-[var(--color-text)]">{label}</span>
-      <div className="relative">
-        <input type="number" min="0" max="100" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled} className="h-10 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 pr-9 text-sm text-[var(--color-text-strong)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]" />
+    <label className="grid min-w-0 gap-2">
+      <span className="min-w-0 break-words text-sm font-medium text-[var(--color-text)]">{label}</span>
+      <div className="relative w-full min-w-0 max-w-full">
+        <input type="number" min="0" max="100" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled} className="h-10 w-full min-w-0 max-w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 pr-9 text-sm text-[var(--color-text-strong)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]" />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)]">%</span>
       </div>
     </label>
@@ -262,7 +285,7 @@ function DecisionOption({ name, value, checked, onChange, disabled, children }: 
     : 'text-[var(--color-warning)]'
 
   return (
-    <label className={`flex min-h-8 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1 py-1 text-sm font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-primary)] ${checked ? selectedClass : 'text-[var(--color-text-strong)]'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}>
+    <label className={`flex min-h-8 min-w-0 cursor-pointer items-start gap-2 rounded-[var(--radius-sm)] px-1 py-1 text-sm font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-primary)] ${checked ? selectedClass : 'text-[var(--color-text-strong)]'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}>
       <input
         type="radio"
         name={name}
@@ -270,9 +293,9 @@ function DecisionOption({ name, value, checked, onChange, disabled, children }: 
         checked={checked}
         onChange={() => onChange(value)}
         disabled={disabled}
-        className="h-4 w-4 accent-[var(--color-primary)]"
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-primary)]"
       />
-      <span>{children}</span>
+      <span className="min-w-0 break-words">{children}</span>
     </label>
   )
 }
@@ -287,5 +310,5 @@ function MetadataRow({ label, value }: { label: string; value?: string | number 
 }
 
 function ErrorMessage({ children }: { children: ReactNode }) {
-  return <p className="rounded-[var(--radius-md)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]" role="alert">{children}</p>
+  return <p className="min-w-0 break-words rounded-[var(--radius-md)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]" role="alert">{children}</p>
 }

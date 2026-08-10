@@ -13,6 +13,7 @@ type ModalProps = {
   onClose: () => void
   size?: ModalSize
   closeLabel?: string
+  mobileFullscreen?: boolean
 }
 
 const sizeClasses: Record<ModalSize, string> = {
@@ -32,29 +33,38 @@ export function Modal({
   onClose,
   size = 'md',
   closeLabel = 'Đóng',
+  mobileFullscreen = false,
 }: ModalProps) {
   if (!open) {
     return null
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 px-4 py-6">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 grid place-items-center bg-slate-950/45',
+        mobileFullscreen ? 'p-0 sm:px-4 sm:py-6' : 'px-4 py-6',
+      )}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          'flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] text-left shadow-[var(--shadow-modal)]',
+          'flex w-full min-w-0 flex-col overflow-hidden whitespace-normal border border-[var(--color-border)] bg-[var(--color-surface)] text-left shadow-[var(--shadow-modal)]',
+          mobileFullscreen
+            ? 'h-full max-h-none rounded-none border-x-0 sm:h-auto sm:max-h-[90vh] sm:rounded-[var(--radius-lg)] sm:border-x'
+            : 'max-h-[90vh] rounded-[var(--radius-lg)]',
           sizeClasses[size],
         )}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
           <div className="min-w-0">
-            <h2 id="modal-title" className="text-lg font-semibold text-[var(--color-text-strong)]">
+            <h2 id="modal-title" className="break-words text-lg font-semibold text-[var(--color-text-strong)]">
               {title}
             </h2>
             {description ? (
-              <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
+              <p className="mt-1 break-words text-sm leading-6 text-[var(--color-text-muted)]">
                 {description}
               </p>
             ) : null}
@@ -68,7 +78,7 @@ export function Modal({
             ×
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
+        <div className="w-full min-w-0 max-w-full overflow-y-auto px-5 py-5">{children}</div>
         {footer ? (
           <div className="flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-5 py-4">
             {footer}

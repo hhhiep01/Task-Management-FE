@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
 import type { TaskWorkflowAction } from '../api/taskApi'
+import { useTaskEvidences } from '../hooks/useTaskEvidences'
 import { useTaskWorkflowAction, useUpdateTaskResult } from '../hooks/useTasks'
 import { WorkTaskStatus, type Task } from '../types/task.types'
 import { getProgress } from '../utils/taskPresentation'
@@ -34,6 +35,7 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
   const { user } = useAuth()
   const workflowMutation = useTaskWorkflowAction()
   const resultMutation = useUpdateTaskResult()
+  const evidencesQuery = useTaskEvidences(task.id)
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null)
   const [isResultEditorOpen, setIsResultEditorOpen] = useState(false)
   const [progressPercent, setProgressPercent] = useState(task.progressPercent ?? 0)
@@ -56,7 +58,10 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
   const hasUnsavedResult =
     progressPercent !== (task.progressPercent ?? 0) ||
     resultDescription.trim() !== (task.resultDescription ?? '').trim()
-  const canSubmitSavedResult = hasResult && (!hasUnsavedResult || Boolean(resultSuccess))
+  const evidenceRequired = Boolean(task.workTemplate?.evidenceRequirement?.trim())
+  const hasEvidence = Boolean(evidencesQuery.data?.length)
+  const evidenceReady = !evidenceRequired || hasEvidence
+  const canSubmitSavedResult = hasResult && (!hasUnsavedResult || Boolean(resultSuccess)) && evidenceReady
   const canStart = isAssignee && task.status === WorkTaskStatus.NEW
   const canSubmit =
     isAssignee &&
@@ -141,13 +146,19 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
           size="sm"
           disabled={isPending || !canSubmitSavedResult}
           onClick={() => void execute('submit')}
-          title={!canSubmitSavedResult ? 'Cần cập nhật tiến độ mới nhất trước khi gửi đánh giá' : undefined}
+          title={
+            !evidenceReady
+              ? 'Cần thêm minh chứng trước khi nộp kết quả'
+              : !canSubmitSavedResult
+                ? 'Cần cập nhật tiến độ mới nhất trước khi nộp kết quả'
+                : undefined
+          }
         >
           {isPending
             ? 'Đang xử lý...'
             : task.status === WorkTaskStatus.REVISION_REQUIRED
-              ? 'Gửi lại'
-              : 'Gửi đánh giá'}
+              ? 'Nộp lại kết quả'
+              : 'Nộp kết quả'}
         </Button>
       ) : null}
       {canEvaluate ? (
@@ -225,6 +236,11 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
           ) : null}
           {!canEditResult ? (
             <ReadOnlyResult task={task} />
+          ) : null}
+          {canSubmit && evidenceRequired && !hasEvidence ? (
+            <p className="rounded-[var(--radius-md)] border border-amber-200 bg-[var(--color-warning-soft)] px-3 py-2 text-sm font-medium text-[var(--color-warning)]">
+              Hãy thêm ít nhất một minh chứng theo yêu cầu trước khi nộp kết quả.
+            </p>
           ) : null}
           {canSubmit && !canSubmitSavedResult ? (
             <p className="text-sm text-[var(--color-danger)]">

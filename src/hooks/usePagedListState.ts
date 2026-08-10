@@ -69,6 +69,25 @@ export function usePagedListState<const TKey extends string>(filterKeys: readonl
     [setSearchParams],
   )
 
+  const setFilters = useCallback(
+    (values: Partial<Record<TKey, string>>) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        next.set('pageNumber', '1')
+
+        filterKeys.forEach((key) => {
+          const value = values[key]
+          if (value === undefined) return
+          if (value) next.set(key, value)
+          else next.delete(key)
+        })
+
+        return next
+      })
+    },
+    [filterKeys, setSearchParams],
+  )
+
   const setPageNumber = useCallback(
     (value: number) => {
       setSearchParams((current) => {
@@ -118,6 +137,7 @@ export function usePagedListState<const TKey extends string>(filterKeys: readonl
     searchInput,
     setSearchInput,
     setFilter,
+    setFilters,
     setPageNumber,
     setPageSize,
     clearFilters,

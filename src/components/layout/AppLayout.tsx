@@ -12,6 +12,8 @@ type NavigationItem = {
 
 const navigation: NavigationItem[] = [
   { label: 'Công việc của tôi', href: '/employee', roles: ['employee'] },
+  { label: 'Tự đánh giá', href: '/employee/self-evaluation', roles: ['employee'] },
+  { label: 'Tiêu chí chung', href: '/common-criteria', roles: ['admin', 'manager', 'employee'] },
   { label: 'Tổng quan', href: '/manager', roles: ['manager'] },
   { label: 'Kỳ đánh giá', href: '/manager/evaluation-periods', roles: ['manager'] },
   { label: 'Nhóm công việc', href: '/manager/work-categories', roles: ['manager'] },

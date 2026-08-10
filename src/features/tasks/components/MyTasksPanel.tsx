@@ -11,7 +11,6 @@ import { usePagedListState } from '@/hooks/usePagedListState'
 import { WorkType, workTypeLabels } from '@/features/work-templates/types/workTemplate.types'
 
 import { useMyTasks } from '../hooks/useTasks'
-import { TaskWorkflowActions } from './TaskWorkflowActions'
 import { WorkTaskStatus, getTaskStatusLabel, isWorkTaskStatus, type Task } from '../types/task.types'
 import {
   getDueBadge,
@@ -127,8 +126,7 @@ export function MyTasksPanel() {
       headerClassName: 'text-right',
       className: 'whitespace-nowrap text-right',
       render: (task) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <TaskWorkflowActions task={task} compact />
+        <div className="flex justify-end">
           <Button
             type="button"
             variant="secondary"
@@ -322,7 +320,6 @@ function MobileTaskCard({ task, detailPath }: { task: Task; detailPath: string }
       >
         Xem chi tiết
       </Button>
-      <TaskWorkflowActions task={task} compact />
     </Card>
   )
 }

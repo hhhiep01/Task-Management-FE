@@ -43,7 +43,9 @@ const initialForm: TaskFormPayload = {
 }
 
 const fieldClassName =
-  'rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-teal-100'
+  'w-full min-w-0 max-w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-teal-100'
+
+const selectClassName = `${fieldClassName} truncate`
 
 const taskFilterKeys = ['periodId', 'workTemplateId', 'organizationId', 'assignedBy', 'assigneeId', 'workType', 'status', 'dueDateFrom', 'dueDateTo'] as const
 
@@ -166,11 +168,13 @@ type ReadOnlyFieldProps = {
 
 function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
   return (
-    <div className="grid gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2">
+    <div className="grid min-w-0 gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2">
       <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
         {label}
       </span>
-      <span className="text-sm text-[var(--color-text-strong)]">{value || '-'}</span>
+      <span className="min-w-0 break-words text-sm text-[var(--color-text-strong)]">
+        {value || '-'}
+      </span>
     </div>
   )
 }
@@ -206,7 +210,11 @@ function FieldError({ show, children }: { show: boolean; children: ReactNode }) 
     return null
   }
 
-  return <p className="text-xs font-medium text-[var(--color-danger)]">{children}</p>
+  return (
+    <p className="min-w-0 break-words text-xs font-medium text-[var(--color-danger)]">
+      {children}
+    </p>
+  )
 }
 
 type TaskMobileCardProps = {
@@ -310,6 +318,8 @@ export function TasksPage() {
       accountsQuery.data?.items.filter((account) => account.role.code.toUpperCase() !== 'ADMIN') ?? [],
     [accountsQuery.data],
   )
+  const selectedPeriod = activePeriods.find((period) => period.id === form.periodId)
+  const selectedAssignee = assigneeOptions.find((account) => account.id === form.assigneeId)
   const formApiError = useMemo(() => {
     const error = createTaskMutation.error || updateTaskMutation.error
     return error instanceof Error ? error.message : ''
@@ -722,24 +732,25 @@ export function TasksPage() {
         description="Chỉ nhập thông tin giao việc. Dữ liệu chuẩn được lấy từ danh mục công việc."
         size="xl"
       >
-        <form onSubmit={handleSubmit} className="mx-auto grid w-full max-w-5xl gap-5">
-          <section className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+        <form onSubmit={handleSubmit} className="mx-auto grid w-full min-w-0 max-w-5xl gap-5">
+          <section className="grid min-w-0 gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
             <h3 className="text-base font-semibold text-[var(--color-text-strong)]">
               Thông tin giao việc
             </h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2">
+            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">Kỳ đánh giá</span>
                 <select
                   value={form.periodId}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, periodId: event.target.value }))
                   }
-                  className={fieldClassName}
+                  className={selectClassName}
+                  title={selectedPeriod?.name}
                 >
                   <option value="">Chọn kỳ đang hoạt động</option>
                   {activePeriods.map((period) => (
-                    <option key={period.id} value={period.id}>
+                    <option key={period.id} value={period.id} title={period.name}>
                       {period.name}
                     </option>
                   ))}
@@ -749,7 +760,7 @@ export function TasksPage() {
                 </FieldError>
               </label>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">
                   Danh mục công việc
                 </span>
@@ -761,11 +772,12 @@ export function TasksPage() {
                       workTemplateId: event.target.value,
                     }))
                   }
-                  className={fieldClassName}
+                  className={selectClassName}
+                  title={selectedTemplate?.name ?? editingTask?.workTemplate?.name}
                 >
                   <option value="">Chọn danh mục công việc</option>
                   {templatesQuery.data?.items.map((template) => (
-                    <option key={template.id} value={template.id}>
+                    <option key={template.id} value={template.id} title={template.name}>
                       {template.name}
                     </option>
                   ))}
@@ -775,7 +787,7 @@ export function TasksPage() {
                 </FieldError>
               </label>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">
                   Người nhận việc
                 </span>
@@ -784,11 +796,20 @@ export function TasksPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, assigneeId: event.target.value }))
                   }
-                  className={fieldClassName}
+                  className={selectClassName}
+                  title={
+                    selectedAssignee
+                      ? `${selectedAssignee.fullName} - ${selectedAssignee.email}`
+                      : undefined
+                  }
                 >
                   <option value="">Chọn người nhận</option>
                   {assigneeOptions.map((account) => (
-                    <option key={account.id} value={account.id}>
+                    <option
+                      key={account.id}
+                      value={account.id}
+                      title={`${account.fullName} - ${account.email}`}
+                    >
                       {account.fullName} - {account.email}
                     </option>
                   ))}
@@ -798,7 +819,7 @@ export function TasksPage() {
                 </FieldError>
               </label>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">Tiêu đề</span>
                 <input
                   value={form.title}
@@ -813,7 +834,7 @@ export function TasksPage() {
                 </FieldError>
               </label>
 
-              <label className="grid gap-2 md:col-span-2">
+              <label className="grid min-w-0 gap-2 lg:col-span-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">Mô tả</span>
                 <textarea
                   value={form.description}
@@ -828,7 +849,7 @@ export function TasksPage() {
                 </p>
               </label>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">Ngày giao</span>
                 <input
                   type="date"
@@ -843,7 +864,7 @@ export function TasksPage() {
                 </FieldError>
               </label>
 
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">
                   Hạn hoàn thành
                 </span>
@@ -862,11 +883,11 @@ export function TasksPage() {
             </div>
           </section>
 
-          <section className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <section className="grid min-w-0 gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <h3 className="text-base font-semibold text-[var(--color-text-strong)]">
               Thông tin từ danh mục chuẩn
             </h3>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">
               <ReadOnlyField label="Kết quả mong đợi" value={selectedTemplate?.expectedOutput} />
               <ReadOnlyField
                 label="Loại công việc"

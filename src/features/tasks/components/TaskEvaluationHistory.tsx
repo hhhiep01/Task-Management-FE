@@ -15,7 +15,6 @@ export function TaskEvaluationHistory({ taskId }: { taskId: string }) {
     <Card className="min-w-0 p-4">
       <div>
         <h2 className="text-base font-semibold text-[var(--color-text-strong)]">Lịch sử đánh giá</h2>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">Điểm và nhận xét do backend ghi nhận theo từng lần đánh giá.</p>
       </div>
 
       {latestNeedsRevision && latest.comment ? (
