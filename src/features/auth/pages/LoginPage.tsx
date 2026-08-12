@@ -14,6 +14,7 @@ type LocationState = {
   from?: {
     pathname?: string
   }
+  successMessage?: string
 }
 
 function getLoginErrorMessage(error: unknown) {
@@ -29,7 +30,7 @@ function getLoginErrorMessage(error: unknown) {
 export function LoginPage() {
   useDocumentTitle(`Đăng nhập | ${env.appName}`)
 
-  const { isAuthenticated, login, user } = useAuth()
+  const { isAuthenticated, login, mustChangePassword, user } = useAuth()
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
@@ -37,24 +38,33 @@ export function LoginPage() {
   const state = location.state as LocationState | null
 
   if (isAuthenticated) {
-    return <Navigate to={getUserHomePath(user)} replace />
+    return (
+      <Navigate
+        to={mustChangePassword ? '/change-password' : getUserHomePath(user)}
+        replace
+      />
+    )
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email') ?? '')
-    const password = String(formData.get('password') ?? '')
+    const email = String(formData.get('email') ?? '').trim()
+    const password = String(formData.get('password') ?? '').trim()
 
     try {
       setErrorMessage('')
       setIsSubmitting(true)
-      const loggedInUser = await login({ email, password })
-      const homePath = getUserHomePath(loggedInUser)
+      const loginResult = await login({ email, password })
+      const homePath = getUserHomePath(loginResult.user)
       const requestedPath = state?.from?.pathname
       const redirectTo =
-        requestedPath && requestedPath !== '/login' ? requestedPath : homePath
+        loginResult.mustChangePassword
+          ? '/change-password'
+          : requestedPath && !['/login', '/change-password'].includes(requestedPath)
+            ? requestedPath
+            : homePath
 
       navigate(redirectTo, { replace: true })
     } catch (error) {
@@ -67,15 +77,16 @@ export function LoginPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[var(--color-app-bg)] px-6 py-10">
       <Card className="w-full max-w-md p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">
-          {env.appName}
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--color-text-strong)]">Đăng nhập</h1>
-        <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
-          Nhập thông tin tài khoản để hệ thống tự chuyển đến đúng khu vực làm việc của bạn.
-        </p>
-
+        <h1 className="text-3xl font-bold text-[var(--color-text-strong)]">Đăng nhập</h1>
         <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+          {state?.successMessage ? (
+            <p
+              className="rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-3 py-2 text-sm font-medium text-[var(--color-success)]"
+              role="status"
+            >
+              {state.successMessage}
+            </p>
+          ) : null}
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">Email</span>
             <input

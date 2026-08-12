@@ -1,14 +1,15 @@
 import { lazy, Suspense } from 'react'
 import type { ReactNode } from 'react'
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AppLayout } from '@/components/layout/AppLayout'
 import { UserAccountsPage } from '@/features/accounts/pages/UserAccountsPage'
 import { AdminPage } from '@/features/admin/pages/AdminPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { ChangePasswordPage } from '@/features/auth/pages/ChangePasswordPage'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { ProtectedRoute } from '@/features/auth/routes/ProtectedRoute'
 import { RoleRedirect } from '@/features/auth/routes/RoleRedirect'
-import { useAuth } from '@/features/auth/hooks/useAuth'
 import { CommonCriteriaPage } from '@/features/common-criteria/pages/CommonCriteriaPage'
 import { EmployeePage } from '@/features/employee/pages/EmployeePage'
 import { EvaluationPeriodsPage } from '@/features/evaluation-periods/pages/EvaluationPeriodsPage'
@@ -39,10 +40,25 @@ const ManagerPeriodReviewDetailPage = lazy(() =>
 )
 
 export function AppRoutes() {
+  const { isAuthenticated, mustChangePassword } = useAuth()
+  const location = useLocation()
+
+  if (
+    isAuthenticated &&
+    mustChangePassword &&
+    !['/login', '/change-password'].includes(location.pathname)
+  ) {
+    return <Navigate to="/change-password" replace />
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route path="/change-password" element={<ChangePasswordPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['admin', 'employee', 'manager']} />}>
         <Route element={<AppLayout />}>
@@ -56,7 +72,11 @@ export function AppRoutes() {
         </Route>
       </Route>
 
-      <Route element={<PeriodEvaluationSummaryAccessRoute />}>
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={['manager']} allowedRoleCodes={['TP', 'PP']} />
+        }
+      >
         <Route element={<AppLayout />}>
           <Route path="/period-evaluation-summary" element={<PeriodEvaluationSummaryPage />} />
           <Route path="/period-evaluation-summary/:periodId/employees/:userId" element={<PeriodEvaluationSummaryDetailPage />} />
@@ -125,19 +145,6 @@ export function AppRoutes() {
       <Route path="*" element={<Navigate to="/not-found" replace />} />
     </Routes>
   )
-}
-
-function PeriodEvaluationSummaryAccessRoute() {
-  const { user, isAuthenticated } = useAuth()
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  const canAccess =
-    user?.role === 'manager' && ['TP', 'PP'].includes(user.roleCode.toUpperCase())
-
-  return canAccess ? <Outlet /> : <Navigate to="/unauthorized" replace />
 }
 
 function LazyReviewPage({ children }: { children: ReactNode }) {

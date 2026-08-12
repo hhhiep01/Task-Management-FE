@@ -7,6 +7,8 @@ export type UserAccount = {
   email: string
   role: Role
   organization: Organization | null
+  mustChangePassword?: boolean
+  passwordChangedAt?: string | null
   createdDate?: string | null
   modifiedDate?: string | null
 }
@@ -33,4 +35,9 @@ export type UserAccountForm = {
   password: string
   roleId: string
   organizationId: string
+}
+
+export type ResetPasswordRequest = {
+  newPassword: string
+  confirmNewPassword: string
 }

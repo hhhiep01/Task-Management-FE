@@ -2,20 +2,32 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
+import { PasswordField } from '@/components/ui/PasswordField'
+import { PasswordRequirements } from '@/components/ui/PasswordRequirements'
 import { env } from '@/config/env'
 import { AdminTabs } from '@/features/admin/components/AdminTabs'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useRoles } from '@/features/roles/hooks/useRoles'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { usePagedListState } from '@/hooks/usePagedListState'
 import type { Role } from '@/features/roles/types/role.types'
 import { formatDate } from '@/utils/formatDate'
+import {
+  getTemporaryPasswordRequirements,
+  hasPasswordErrors,
+  validatePasswordFields,
+} from '@/utils/passwordValidation'
+import type { PasswordFieldErrors } from '@/utils/passwordValidation'
 
 import {
   useCreateUserAccount,
   useDeleteUserAccount,
+  useResetUserPassword,
   useUpdateUserAccount,
   useUserAccounts,
 } from '../hooks/useUserAccounts'
@@ -31,13 +43,23 @@ const initialForm: UserAccountForm = {
 
 const filterKeys = ['roleId', 'organizationId'] as const
 
+const initialResetPasswordForm = {
+  newPassword: '',
+  confirmNewPassword: '',
+}
+
 export function UserAccountsPage() {
   useDocumentTitle(`Quản lý tài khoản | ${env.appName}`)
 
+  const { user } = useAuth()
   const [form, setForm] = useState<UserAccountForm>(initialForm)
   const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null)
   const [formError, setFormError] = useState('')
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  const [resettingAccount, setResettingAccount] = useState<UserAccount | null>(null)
+  const [resetPasswordForm, setResetPasswordForm] = useState(initialResetPasswordForm)
+  const [resetPasswordErrors, setResetPasswordErrors] = useState<PasswordFieldErrors>({})
+  const [successMessage, setSuccessMessage] = useState('')
 
   const listState = usePagedListState(filterKeys)
   const accountsQuery = useUserAccounts(listState.query)
@@ -46,8 +68,10 @@ export function UserAccountsPage() {
   const createAccountMutation = useCreateUserAccount()
   const updateAccountMutation = useUpdateUserAccount()
   const deleteAccountMutation = useDeleteUserAccount()
+  const resetPasswordMutation = useResetUserPassword()
 
   const isSubmitting = createAccountMutation.isPending || updateAccountMutation.isPending
+  const canResetPassword = user?.roleCode.toUpperCase() === 'ADMIN'
   const modalTitle = editingAccount ? 'Cập nhật tài khoản' : 'Tạo tài khoản'
   const roleOptions = useMemo(
     () =>
@@ -65,6 +89,8 @@ export function UserAccountsPage() {
   }, [createAccountMutation.error, updateAccountMutation.error])
   const deleteError =
     deleteAccountMutation.error instanceof Error ? deleteAccountMutation.error.message : ''
+  const resetPasswordApiError =
+    resetPasswordMutation.error instanceof Error ? resetPasswordMutation.error.message : ''
 
   const closeModal = () => {
     setForm(initialForm)
@@ -93,6 +119,32 @@ export function UserAccountsPage() {
     setIsAccountModalOpen(true)
   }
 
+  const closeResetPasswordModal = () => {
+    if (resetPasswordMutation.isPending) return
+
+    setResettingAccount(null)
+    setResetPasswordForm(initialResetPasswordForm)
+    setResetPasswordErrors({})
+    resetPasswordMutation.reset()
+  }
+
+  const openResetPasswordModal = (account: UserAccount) => {
+    setResettingAccount(account)
+    setResetPasswordForm(initialResetPasswordForm)
+    setResetPasswordErrors({})
+    setSuccessMessage('')
+    resetPasswordMutation.reset()
+  }
+
+  const setResetPasswordField = (
+    field: keyof typeof initialResetPasswordForm,
+    value: string,
+  ) => {
+    setResetPasswordForm((current) => ({ ...current, [field]: value }))
+    setResetPasswordErrors((current) => ({ ...current, [field]: undefined }))
+    resetPasswordMutation.reset()
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -114,6 +166,16 @@ export function UserAccountsPage() {
       return
     }
 
+    if (
+      !editingAccount &&
+      getTemporaryPasswordRequirements(payload.password).some(
+        (requirement) => !requirement.met,
+      )
+    ) {
+      setFormError('Mật khẩu tạm phải có ít nhất 5 ký tự.')
+      return
+    }
+
     setFormError('')
 
     if (editingAccount) {
@@ -124,7 +186,6 @@ export function UserAccountsPage() {
           email: payload.email,
           roleId: payload.roleId,
           organizationId: payload.organizationId,
-          ...(payload.password ? { password: payload.password } : {}),
         },
       })
     } else {
@@ -132,6 +193,37 @@ export function UserAccountsPage() {
     }
 
     closeModal()
+  }
+
+  const handleResetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!resettingAccount || !canResetPassword) return
+
+    const payload = {
+      newPassword: resetPasswordForm.newPassword.trim(),
+      confirmNewPassword: resetPasswordForm.confirmNewPassword.trim(),
+    }
+    const errors = validatePasswordFields({ ...payload, policy: 'temporary' })
+    setResetPasswordErrors(errors)
+
+    if (hasPasswordErrors(errors)) return
+
+    try {
+      await resetPasswordMutation.mutateAsync({
+        accountId: resettingAccount.id,
+        payload,
+      })
+
+      setResettingAccount(null)
+      setResetPasswordForm(initialResetPasswordForm)
+      setResetPasswordErrors({})
+      setSuccessMessage(
+        'Đặt lại mật khẩu thành công. Nhân viên phải đổi mật khẩu tạm thời sau lần đăng nhập tiếp theo.',
+      )
+    } catch {
+      // React Query exposes the backend error through resetPasswordMutation.error.
+    }
   }
 
   const handleDelete = async (account: UserAccount) => {
@@ -162,6 +254,15 @@ export function UserAccountsPage() {
           Tạo tài khoản
         </Button>
       </div>
+
+      {successMessage ? (
+        <p
+          className="mt-4 rounded-[var(--radius-md)] border border-emerald-200 bg-[var(--color-success-soft)] px-4 py-3 text-sm font-medium text-[var(--color-success)]"
+          role="status"
+        >
+          {successMessage}
+        </p>
+      ) : null}
 
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
@@ -224,13 +325,14 @@ export function UserAccountsPage() {
           </p>
         ) : accountsQuery.data?.items.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1120px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Họ tên</th>
                   <th className="px-5 py-3 font-semibold">Email</th>
                   <th className="px-5 py-3 font-semibold">Vai trò</th>
                   <th className="px-5 py-3 font-semibold">Phòng ban</th>
+                  <th className="px-5 py-3 font-semibold">Mật khẩu</th>
                   <th className="px-5 py-3 font-semibold">Ngày tạo</th>
                   <th className="px-5 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
@@ -248,6 +350,9 @@ export function UserAccountsPage() {
                     <td className="px-5 py-4 text-slate-600">
                       {account.organization?.name ?? '-'}
                     </td>
+                    <td className="px-5 py-4">
+                      <PasswordStatusBadge account={account} />
+                    </td>
                     <td className="px-5 py-4 text-slate-600">
                       {formatDate(account.createdDate)}
                     </td>
@@ -260,6 +365,15 @@ export function UserAccountsPage() {
                         >
                           Sửa
                         </button>
+                        {canResetPassword ? (
+                          <button
+                            type="button"
+                            onClick={() => openResetPasswordModal(account)}
+                            className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700"
+                          >
+                            Đặt lại mật khẩu
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => void handleDelete(account)}
@@ -338,20 +452,26 @@ export function UserAccountsPage() {
                 />
               </label>
 
-              <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-700">
-                  Mật khẩu {editingAccount ? '(để trống nếu không đổi)' : ''}
-                </span>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, password: event.target.value }))
-                  }
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
-                  placeholder="Nhập mật khẩu"
-                />
-              </label>
+              {!editingAccount ? (
+                <>
+                  <PasswordField
+                    id="create-account-password"
+                    label="Mật khẩu tạm"
+                    value={form.password}
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, password: event.target.value }))
+                      setFormError('')
+                    }}
+                    autoComplete="new-password"
+                    disabled={isSubmitting}
+                  />
+                  <PasswordRequirements password={form.password.trim()} policy="temporary" />
+                  <p className="text-sm leading-6 text-[var(--color-text-muted)]">
+                    Nhân viên dùng mật khẩu này để đăng nhập lần đầu và sẽ được yêu cầu đổi
+                    mật khẩu ngay sau đó.
+                  </p>
+                </>
+              ) : null}
 
               <label className="grid gap-2">
                 <span className="text-sm font-medium text-slate-700">Vai trò</span>
@@ -417,10 +537,109 @@ export function UserAccountsPage() {
           </div>
         </div>
       )}
+
+      <Modal
+        open={Boolean(resettingAccount)}
+        title="Đặt lại mật khẩu"
+        description="Tạo mật khẩu tạm thời cho tài khoản người dùng."
+        onClose={closeResetPasswordModal}
+        size="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={closeResetPasswordModal}
+              disabled={resetPasswordMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              form="reset-password-form"
+              disabled={resetPasswordMutation.isPending}
+            >
+              {resetPasswordMutation.isPending ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
+            </Button>
+          </>
+        }
+      >
+        {resettingAccount ? (
+          <form
+            id="reset-password-form"
+            className="grid gap-4"
+            onSubmit={(event) => void handleResetPassword(event)}
+            noValidate
+          >
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
+              <p className="text-xs font-medium text-[var(--color-text-muted)]">Nhân viên</p>
+              <p className="mt-1 font-semibold text-[var(--color-text-strong)]">
+                {resettingAccount.fullName}
+              </p>
+              <p className="mt-0.5 break-all text-sm text-[var(--color-text-muted)]">
+                {resettingAccount.email}
+              </p>
+            </div>
+
+            <PasswordField
+              id="reset-new-password"
+              label="Mật khẩu tạm mới"
+              value={resetPasswordForm.newPassword}
+              onChange={(event) => setResetPasswordField('newPassword', event.target.value)}
+              autoComplete="new-password"
+              error={resetPasswordErrors.newPassword}
+              disabled={resetPasswordMutation.isPending}
+            />
+
+            <PasswordRequirements
+              password={resetPasswordForm.newPassword.trim()}
+              policy="temporary"
+            />
+
+            <PasswordField
+              id="reset-confirm-password"
+              label="Xác nhận mật khẩu"
+              value={resetPasswordForm.confirmNewPassword}
+              onChange={(event) =>
+                setResetPasswordField('confirmNewPassword', event.target.value)
+              }
+              autoComplete="new-password"
+              error={resetPasswordErrors.confirmNewPassword}
+              disabled={resetPasswordMutation.isPending}
+            />
+
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">
+              Mật khẩu này chỉ sử dụng tạm thời. Nhân viên sẽ được yêu cầu đổi mật khẩu sau
+              khi đăng nhập.
+            </p>
+
+            {resetPasswordApiError ? (
+              <p
+                className="rounded-[var(--radius-md)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]"
+                role="alert"
+              >
+                {resetPasswordApiError}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
+      </Modal>
     </section>
   )
 }
 
 function getRoleText(value: Role[keyof Pick<Role, 'code' | 'name'>]) {
   return value.trim().toUpperCase()
+}
+
+function PasswordStatusBadge({ account }: { account: UserAccount }) {
+  if (account.mustChangePassword === undefined) {
+    return <span className="text-sm text-slate-500">-</span>
+  }
+
+  return (
+    <Badge variant="neutral" title={account.mustChangePassword ? 'Yêu cầu đổi mật khẩu' : undefined}>
+      {account.mustChangePassword ? 'Mật khẩu tạm' : 'Đã đổi mật khẩu'}
+    </Badge>
+  )
 }

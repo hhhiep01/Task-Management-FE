@@ -9,11 +9,15 @@ type ProtectedRouteProps = {
 }
 
 export function ProtectedRoute({ allowedRoles, allowedRoleCodes }: ProtectedRouteProps) {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, mustChangePassword } = useAuth()
   const location = useLocation()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role ?? 'guest')) {

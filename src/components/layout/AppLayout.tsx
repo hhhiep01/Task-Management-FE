@@ -225,6 +225,12 @@ export function AppLayout() {
                 <p className="truncate text-sm font-semibold text-[var(--color-text-strong)]">{user?.name}</p>
                 <p className="truncate text-xs text-[var(--color-text-muted)]">{user?.email}</p>
               </div>
+              <NavLink
+                to="/change-password"
+                className="mt-1 flex h-9 w-full items-center rounded-[var(--radius-md)] px-3 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              >
+                Đổi mật khẩu
+              </NavLink>
               <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={logout}>
                 Đăng xuất
               </Button>

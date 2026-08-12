@@ -2,7 +2,14 @@ import axios from 'axios'
 import type { AxiosError } from 'axios'
 
 import { env } from '@/config/env'
+import {
+  clearAuthStorage,
+  setStoredMustChangePassword,
+} from '@/features/auth/utils/authStorage'
 import type { ApiResponse } from '@/types/api'
+
+const PASSWORD_CHANGE_REQUIRED_MESSAGE =
+  'Password change is required before continuing.'
 
 export class ApiClientError extends Error {
   readonly status?: number
@@ -42,11 +49,21 @@ httpClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('authUser')
-      localStorage.removeItem('accessToken')
+      clearAuthStorage()
 
       if (!window.location.pathname.startsWith('/login')) {
         window.location.assign('/login')
+      }
+    }
+
+    if (
+      error.response?.status === 403 &&
+      error.response.data?.errorMessage?.trim() === PASSWORD_CHANGE_REQUIRED_MESSAGE
+    ) {
+      setStoredMustChangePassword(true)
+
+      if (window.location.pathname !== '/change-password') {
+        window.location.assign('/change-password')
       }
     }
 

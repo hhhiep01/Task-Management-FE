@@ -4,10 +4,15 @@ import {
   createUserAccount,
   deleteUserAccount,
   getUserAccounts,
+  resetUserPassword,
   updateUserAccount,
 } from '../api/userAccountApi'
 import type { UserAccountQuery } from '../api/userAccountApi'
-import type { CreateUserAccountRequest, UpdateUserAccountRequest } from '../types/account.types'
+import type {
+  CreateUserAccountRequest,
+  ResetPasswordRequest,
+  UpdateUserAccountRequest,
+} from '../types/account.types'
 
 export const userAccountQueryKeys = {
   all: ['user-accounts'] as const,
@@ -54,6 +59,23 @@ export function useDeleteUserAccount() {
 
   return useMutation({
     mutationFn: deleteUserAccount,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userAccountQueryKeys.all })
+    },
+  })
+}
+
+export function useResetUserPassword() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      accountId,
+      payload,
+    }: {
+      accountId: string
+      payload: ResetPasswordRequest
+    }) => resetUserPassword(accountId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userAccountQueryKeys.all })
     },

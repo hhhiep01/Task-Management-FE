@@ -11,7 +11,8 @@ export type AuthUser = {
 export type AuthContextValue = {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (credentials: LoginCredentials) => Promise<AuthUser>
+  mustChangePassword: boolean
+  login: (credentials: LoginCredentials) => Promise<AuthenticatedLogin>
   logout: () => void
 }
 
@@ -25,4 +26,18 @@ export type LoginRequest = {
   password: string
 }
 
-export type LoginResponse = string
+export type LoginResult = {
+  token: string
+  mustChangePassword: boolean
+}
+
+export type AuthenticatedLogin = {
+  user: AuthUser
+  mustChangePassword: boolean
+}
+
+export type ChangePasswordRequest = {
+  currentPassword: string
+  newPassword: string
+  confirmNewPassword: string
+}

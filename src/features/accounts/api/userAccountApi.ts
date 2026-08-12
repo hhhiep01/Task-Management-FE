@@ -5,6 +5,7 @@ import { buildQueryParams } from '@/utils/queryString'
 
 import type {
   CreateUserAccountRequest,
+  ResetPasswordRequest,
   UpdateUserAccountRequest,
   UserAccount,
 } from '../types/account.types'
@@ -15,6 +16,7 @@ export const userAccountApiLinks = {
   detail: (accountId: string) => `/api/UserAccount/${accountId}`,
   update: (accountId: string) => `/api/UserAccount/${accountId}`,
   delete: (accountId: string) => `/api/UserAccount/${accountId}`,
+  resetPassword: (accountId: string) => `/api/UserAccount/${accountId}/reset-password`,
 }
 
 export type UserAccountQuery = PaginationQuery & {
@@ -27,6 +29,7 @@ export type GetUserAccountByIdResponse = ApiResponse<UserAccount>
 export type CreateUserAccountResponse = ApiResponse<UserAccount>
 export type UpdateUserAccountResponse = ApiResponse<UserAccount>
 export type DeleteUserAccountResponse = ApiResponse<null>
+export type ResetUserPasswordResponse = ApiResponse<unknown>
 
 export async function getUserAccounts(query: UserAccountQuery, signal?: AbortSignal) {
   const response = await httpClient.get<GetUserAccountsResponse>(userAccountApiLinks.list, {
@@ -67,6 +70,17 @@ export async function updateUserAccount(
 export async function deleteUserAccount(accountId: string): Promise<null> {
   const response = await httpClient.delete<DeleteUserAccountResponse>(
     userAccountApiLinks.delete(accountId),
+  )
+  return unwrapApiResponse(response.data)
+}
+
+export async function resetUserPassword(
+  accountId: string,
+  payload: ResetPasswordRequest,
+): Promise<unknown> {
+  const response = await httpClient.post<ResetUserPasswordResponse>(
+    userAccountApiLinks.resetPassword(accountId),
+    payload,
   )
   return unwrapApiResponse(response.data)
 }
