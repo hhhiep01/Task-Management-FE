@@ -16,6 +16,7 @@ import {
   getDueBadge,
   getProgress,
   getStatusVariant,
+  getTaskStatusSecondaryText,
   isRevisionRequired,
 } from '../utils/taskPresentation'
 
@@ -51,11 +52,13 @@ const statusTabs = [
   { value: WorkTaskStatus.CANCELLED, label: 'Đã hủy' },
 ] as const
 
-export function MyTasksPanel() {
+export function MyTasksPanel({ controlledPeriodId }: { controlledPeriodId?: string } = {}) {
   const listState = usePagedListState(myTaskFilterKeys)
   const activeStatus = isWorkTaskStatus(listState.filters.status) ? listState.filters.status : ''
+  const selectedPeriodId = controlledPeriodId ?? listState.filters.periodId
   const myTasksQuery = useMyTasks({
     ...listState.query,
+    periodId: selectedPeriodId || undefined,
     status: activeStatus || undefined,
   })
   const periodsQuery = useEvaluationPeriods()
@@ -112,9 +115,15 @@ export function MyTasksPanel() {
       render: (task) => (
         <div className="grid justify-items-start gap-1.5">
           <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
-          {isRevisionRequired(task) ? (
-            <span className="text-xs font-medium text-[var(--color-warning)]">
-              Cần xem lại kết quả
+          {getTaskStatusSecondaryText(task) ? (
+            <span
+              className={`text-xs font-medium ${
+                isRevisionRequired(task)
+                  ? 'text-[var(--color-warning)]'
+                  : 'text-[var(--color-text-muted)]'
+              }`}
+            >
+              {getTaskStatusSecondaryText(task)}
             </span>
           ) : null}
         </div>
@@ -183,7 +192,7 @@ export function MyTasksPanel() {
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
           <FilterInput label="Tìm kiếm" value={listState.searchInput} onChange={listState.setSearchInput} placeholder="Tên hoặc mô tả công việc" />
-          <FilterSelect label="Kỳ đánh giá" value={listState.filters.periodId} onChange={(value) => listState.setFilter('periodId', value)} options={periodsQuery.data?.items.map((period) => ({ value: period.id, label: period.name })) ?? []} />
+          {controlledPeriodId === undefined ? <FilterSelect label="Kỳ đánh giá" value={listState.filters.periodId} onChange={(value) => listState.setFilter('periodId', value)} options={periodsQuery.data?.items.map((period) => ({ value: period.id, label: period.name })) ?? []} /> : null}
           <FilterSelect label="Loại công việc" value={listState.filters.workType} onChange={(value) => listState.setFilter('workType', value)} options={Object.values(WorkType).map((value) => ({ value, label: workTypeLabels[value] }))} />
           <FilterInput label="Hạn từ ngày" type="date" value={listState.filters.dueDateFrom} onChange={(value) => listState.setFilter('dueDateFrom', value)} />
           <FilterInput label="Hạn đến ngày" type="date" value={listState.filters.dueDateTo} onChange={(value) => listState.setFilter('dueDateTo', value)} />
@@ -293,9 +302,15 @@ function MobileTaskCard({ task, detailPath }: { task: Task; detailPath: string }
         </div>
         <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
       </div>
-      {isRevisionRequired(task) ? (
-        <div className="rounded-[var(--radius-md)] border border-amber-200 bg-[var(--color-warning-soft)] px-3 py-2 text-sm font-medium text-[var(--color-warning)]">
-          Cần xem lại kết quả theo phản hồi hiện có.
+      {getTaskStatusSecondaryText(task) ? (
+        <div
+          className={`rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium ${
+            isRevisionRequired(task)
+              ? 'border border-amber-200 bg-[var(--color-warning-soft)] text-[var(--color-warning)]'
+              : 'border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)]'
+          }`}
+        >
+          {getTaskStatusSecondaryText(task)}
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 text-sm">

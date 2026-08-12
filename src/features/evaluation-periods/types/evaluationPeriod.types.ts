@@ -12,6 +12,8 @@ export const PeriodStatus = {
   DRAFT: 'DRAFT',
   ACTIVE: 'ACTIVE',
   CLOSED: 'CLOSED',
+  EVALUATING: 'EVALUATING',
+  LOCKED: 'LOCKED',
 } as const
 
 export type PeriodStatus = (typeof PeriodStatus)[keyof typeof PeriodStatus]

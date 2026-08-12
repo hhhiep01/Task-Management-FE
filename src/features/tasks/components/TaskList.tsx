@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/Badge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 
 import { WorkTaskStatus, getTaskStatusLabel, type Task } from '../types/task.types'
+import { getTaskStatusSecondaryText } from '../utils/taskPresentation'
 
 type TaskListProps = {
   tasks: Task[]
@@ -119,7 +120,14 @@ const columns: DataTableColumn<Task>[] = [
     header: 'Trạng thái',
     className: 'whitespace-nowrap',
     render: (task) => (
-      <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+      <div className="grid justify-items-start gap-1">
+        <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+        {getTaskStatusSecondaryText(task) ? (
+          <span className="text-xs font-medium text-[var(--color-text-muted)]">
+            {getTaskStatusSecondaryText(task)}
+          </span>
+        ) : null}
+      </div>
     ),
   },
   {

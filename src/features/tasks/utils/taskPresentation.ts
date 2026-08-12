@@ -50,22 +50,11 @@ export function getDaysUntilDue(task: Task) {
 }
 
 export function isRevisionRequired(task: Task) {
-  if (task.status === WorkTaskStatus.REVISION_REQUIRED) {
-    return true
-  }
-
-  const text = `${task.status} ${task.resultDescription ?? ''}`.toLowerCase()
-
-  return (
-    text.includes('revision_required') ||
-    text.includes('revision') ||
-    text.includes('revise') ||
-    text.includes('sửa')
-  )
+  return task.status === WorkTaskStatus.REVISION_REQUIRED
 }
 
 export function getStatusVariant(task: Task): TaskBadgeVariant {
-  if (isRevisionRequired(task)) {
+  if (task.status === WorkTaskStatus.REVISION_REQUIRED) {
     return 'warning'
   }
 
@@ -116,4 +105,16 @@ export function getDueBadge(task: Task): { label: string; variant: TaskBadgeVari
 
 export function getTaskStatusDisplay(task: Task) {
   return getTaskStatusLabel(task.status)
+}
+
+export function getTaskStatusSecondaryText(task: Task) {
+  if (task.status === WorkTaskStatus.REVISION_REQUIRED) {
+    return 'Cần xem lại kết quả'
+  }
+
+  if (task.status === WorkTaskStatus.COMPLETED) {
+    return 'Đã được phê duyệt'
+  }
+
+  return null
 }

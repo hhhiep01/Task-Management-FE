@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
 import { AdminTabs } from '@/features/admin/components/AdminTabs'
@@ -21,9 +22,40 @@ import type { Organization, OrganizationPayload } from '../types/organization.ty
 const initialForm: OrganizationPayload = {
   code: '',
   name: '',
+  parentId: null,
 }
 
 const filterKeys = [] as const
+
+function getOrganizationErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : ''
+  const normalized = message.toLowerCase()
+
+  if (normalized.includes('parent organization not found')) return 'Không tìm thấy đơn vị cha.'
+  if (normalized.includes('organization cannot be its own parent')) return 'Đơn vị không thể là đơn vị cha của chính mình.'
+  if (normalized.includes('organization hierarchy cannot contain a cycle')) return 'Cấu trúc đơn vị không thể tạo vòng lặp. Vui lòng chọn đơn vị cha khác.'
+  if (normalized.includes('organization has child organizations and cannot be deleted')) return 'Không thể xóa đơn vị đang có đơn vị con. Hãy chuyển hoặc xóa các đơn vị con trước.'
+  return message
+}
+
+function getDescendantIds(organizations: Organization[], organizationId: string) {
+  const descendants = new Set<string>()
+  const pending = [organizationId]
+
+  while (pending.length) {
+    const currentId = pending.pop()
+    if (!currentId) continue
+
+    organizations.forEach((organization) => {
+      if (organization.parentId === currentId && !descendants.has(organization.id)) {
+        descendants.add(organization.id)
+        pending.push(organization.id)
+      }
+    })
+  }
+
+  return descendants
+}
 
 export function OrganizationsPage() {
   useDocumentTitle(`Quản lý phòng ban | ${env.appName}`)
@@ -35,6 +67,7 @@ export function OrganizationsPage() {
 
   const listState = usePagedListState(filterKeys)
   const organizationsQuery = useOrganizations(listState.query)
+  const organizationOptionsQuery = useOrganizations({ pageNumber: 1, pageSize: 1000 })
   const createOrganizationMutation = useCreateOrganization()
   const updateOrganizationMutation = useUpdateOrganization()
   const deleteOrganizationMutation = useDeleteOrganization()
@@ -44,12 +77,14 @@ export function OrganizationsPage() {
   const modalTitle = editingOrganization ? 'Cập nhật phòng ban' : 'Tạo phòng ban'
   const formApiError = useMemo(() => {
     const error = createOrganizationMutation.error || updateOrganizationMutation.error
-    return error instanceof Error ? error.message : ''
+    return getOrganizationErrorMessage(error)
   }, [createOrganizationMutation.error, updateOrganizationMutation.error])
-  const deleteError =
-    deleteOrganizationMutation.error instanceof Error
-      ? deleteOrganizationMutation.error.message
-      : ''
+  const deleteError = getOrganizationErrorMessage(deleteOrganizationMutation.error)
+  const allOrganizations = organizationOptionsQuery.data?.items ?? organizationsQuery.data?.items ?? []
+  const excludedParentIds = editingOrganization
+    ? new Set([editingOrganization.id, ...getDescendantIds(allOrganizations, editingOrganization.id)])
+    : new Set<string>()
+  const parentOptions = allOrganizations.filter((organization) => !excludedParentIds.has(organization.id))
 
   const closeModal = () => {
     setForm(initialForm)
@@ -70,6 +105,7 @@ export function OrganizationsPage() {
     setForm({
       code: organization.code,
       name: organization.name,
+      parentId: organization.parentId ?? null,
     })
     setFormError('')
     setIsOrganizationModalOpen(true)
@@ -81,6 +117,7 @@ export function OrganizationsPage() {
     const payload = {
       code: form.code.trim(),
       name: form.name.trim(),
+      parentId: form.parentId || null,
     }
 
     if (!payload.code || !payload.name) {
@@ -90,16 +127,20 @@ export function OrganizationsPage() {
 
     setFormError('')
 
-    if (editingOrganization) {
-      await updateOrganizationMutation.mutateAsync({
-        organizationId: editingOrganization.id,
-        payload,
-      })
-    } else {
-      await createOrganizationMutation.mutateAsync(payload)
-    }
+    try {
+      if (editingOrganization) {
+        await updateOrganizationMutation.mutateAsync({
+          organizationId: editingOrganization.id,
+          payload,
+        })
+      } else {
+        await createOrganizationMutation.mutateAsync(payload)
+      }
 
-    closeModal()
+      closeModal()
+    } catch {
+      // Keep the form open so the backend validation message can be reviewed.
+    }
   }
 
   const handleDelete = async (organization: Organization) => {
@@ -109,7 +150,11 @@ export function OrganizationsPage() {
       return
     }
 
-    await deleteOrganizationMutation.mutateAsync(organization.id)
+    try {
+      await deleteOrganizationMutation.mutateAsync(organization.id)
+    } catch {
+      // The mapped mutation error is rendered above.
+    }
   }
 
   return (
@@ -177,6 +222,7 @@ export function OrganizationsPage() {
                 <tr>
                   <th className="px-5 py-3 font-semibold">Mã phòng ban</th>
                   <th className="px-5 py-3 font-semibold">Tên phòng ban</th>
+                  <th className="px-5 py-3 font-semibold">Đơn vị cha</th>
                   <th className="px-5 py-3 font-semibold">Ngày tạo</th>
                   <th className="px-5 py-3 font-semibold">Ngày cập nhật</th>
                   <th className="px-5 py-3 text-right font-semibold">Thao tác</th>
@@ -189,6 +235,9 @@ export function OrganizationsPage() {
                       {organization.code}
                     </td>
                     <td className="px-5 py-4 text-slate-700">{organization.name}</td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {organization.parentId ? organization.parentName || 'Chưa có tên đơn vị trực thuộc' : 'Đơn vị cấp gốc'}
+                    </td>
                     <td className="px-5 py-4 text-slate-600">
                       {formatDate(organization.createdDate)}
                     </td>
@@ -241,22 +290,23 @@ export function OrganizationsPage() {
         ) : null}
       </Card>
 
-      {isOrganizationModalOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4 py-6">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-lg font-semibold text-slate-950">{modalTitle}</h2>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-md px-2 py-1 text-xl leading-none text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                aria-label="Đóng"
-              >
-                x
-              </button>
-            </div>
-
-            <form className="space-y-4 p-5" onSubmit={handleSubmit}>
+      <Modal
+        open={isOrganizationModalOpen}
+        title={modalTitle}
+        description="Thiết lập mã, tên và vị trí của đơn vị trong cơ cấu tổ chức."
+        onClose={closeModal}
+        size="md"
+        mobileFullscreen
+        footer={(
+          <>
+            <Button type="button" variant="secondary" onClick={closeModal}>Hủy</Button>
+            <Button type="submit" form="organization-form" disabled={isSubmitting}>
+              {isSubmitting ? 'Đang lưu...' : editingOrganization ? 'Lưu thay đổi' : 'Tạo phòng ban'}
+            </Button>
+          </>
+        )}
+      >
+            <form id="organization-form" className="space-y-5" onSubmit={handleSubmit}>
               <label className="block">
                 <span className="text-sm font-medium text-slate-700">Mã phòng ban</span>
                 <input
@@ -267,6 +317,27 @@ export function OrganizationsPage() {
                   className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
                   placeholder="IT"
                 />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Đơn vị trực thuộc</span>
+                <select
+                  id="organization-parent"
+                  value={form.parentId ?? ''}
+                  onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value || null }))}
+                  aria-describedby="organization-parent-help"
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="">Không thuộc đơn vị nào (đơn vị cấp gốc)</option>
+                  {parentOptions.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name} ({organization.code})
+                    </option>
+                  ))}
+                </select>
+                <span id="organization-parent-help" className="mt-1.5 block text-xs leading-5 text-slate-500">
+                  Chọn đơn vị mà phòng ban này trực tiếp thuộc về. Chọn cấp gốc nếu đây là đơn vị cao nhất.
+                </span>
               </label>
 
               <label className="block">
@@ -287,26 +358,8 @@ export function OrganizationsPage() {
                 </p>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="rounded-md border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Hủy
-                </button>
-                <Button type="submit" disabled={isSubmitting} className="disabled:opacity-60">
-                  {isSubmitting
-                    ? 'Đang lưu...'
-                    : editingOrganization
-                      ? 'Lưu thay đổi'
-                      : 'Tạo phòng ban'}
-                </Button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </section>
   )
 }

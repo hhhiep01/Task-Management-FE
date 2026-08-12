@@ -287,7 +287,7 @@ export function TaskEvidenceSection({ task }: { task: Task }) {
   const evidences = evidencesQuery.data ?? []
 
   return (
-    <Card id="task-evidence" className="min-w-0 scroll-mt-4 p-4">
+    <Card id="task-evidence" variant="flat" className="min-w-0 scroll-mt-4 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-[var(--color-text-strong)]">Minh chứng</h2>
@@ -381,7 +381,7 @@ function EvidenceCard({ evidence, canEdit, onEdit, onDelete, onDownload, onPrevi
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Badge variant={evidence.evidenceType === TaskEvidenceType.FILE ? 'primary' : evidence.evidenceType === TaskEvidenceType.LINK ? 'info' : 'neutral'}>{evidenceTypeLabel(evidence.evidenceType)}</Badge>
-          <h3 className="mt-2 truncate font-semibold text-[var(--color-text-strong)]" title={evidenceLabel(evidence)}>{evidenceLabel(evidence)}</h3>
+          <h3 className="mt-2 break-words font-semibold text-[var(--color-text-strong)]" title={evidenceLabel(evidence)}>{evidenceLabel(evidence)}</h3>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1 sm:justify-end">
           {canPreview ? <Button size="sm" disabled={Boolean(fileAction)} onClick={() => void onPreview(evidence)}>{isCurrentFileAction && fileAction?.type === 'preview' ? 'Đang mở...' : 'Xem trước'}</Button> : null}

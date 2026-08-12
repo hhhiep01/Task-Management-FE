@@ -145,6 +145,7 @@ export function SelfEvaluationPage() {
   }, [selfEvaluationQuery.data, resetUpdateSelfEvaluation])
 
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId)
+  const isPeriodLocked = selectedPeriod?.status === PeriodStatus.LOCKED
   const items = useMemo(
     () => getItems(selfEvaluationQuery.data?.criteria ?? []),
     [selfEvaluationQuery.data],
@@ -193,7 +194,7 @@ export function SelfEvaluationPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedPeriodId || updateSelfEvaluationMutation.isPending) return
+    if (!selectedPeriodId || isPeriodLocked || updateSelfEvaluationMutation.isPending) return
 
     setShowErrors(true)
     const errors = validateItems(formState)
@@ -268,6 +269,11 @@ export function SelfEvaluationPage() {
         />
       ) : selfEvaluationQuery.data && selfEvaluationQuery.data.criteria.length ? (
         <>
+          {isPeriodLocked ? (
+            <p className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-info-soft)] px-4 py-3 text-sm font-medium text-[var(--color-info)]" role="status">
+              Kỳ đánh giá đã khóa. Dữ liệu chỉ được xem và không thể chỉnh sửa.
+            </p>
+          ) : null}
           <form className="grid min-w-0 gap-5" onSubmit={handleSubmit} noValidate>
             <Card className="sticky top-4 z-10 grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="min-w-0">
@@ -292,7 +298,7 @@ export function SelfEvaluationPage() {
                   {' / '}{formatScore(totalMaxScore)}
                 </span>
               </p>
-              <Button type="submit" disabled={updateSelfEvaluationMutation.isPending}>
+              <Button type="submit" disabled={isPeriodLocked || updateSelfEvaluationMutation.isPending}>
                 {updateSelfEvaluationMutation.isPending ? 'Đang lưu...' : 'Lưu tự đánh giá'}
               </Button>
             </div>
@@ -318,6 +324,7 @@ export function SelfEvaluationPage() {
                 errors={itemErrors}
                 onMetChange={handleMetChange}
                 onItemChange={updateItem}
+                readOnly={isPeriodLocked}
               />
             ))}
             </div>
@@ -325,6 +332,7 @@ export function SelfEvaluationPage() {
           <PeriodResultSection
             periodId={selectedPeriodId}
             refreshVersion={periodResultRefreshVersion}
+            isPeriodLocked={isPeriodLocked}
           />
         </>
       ) : (
@@ -334,7 +342,7 @@ export function SelfEvaluationPage() {
   )
 }
 
-function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; refreshVersion: number }) {
+function PeriodResultSection({ periodId, refreshVersion, isPeriodLocked = false }: { periodId: string; refreshVersion: number; isPeriodLocked?: boolean }) {
   const [selectedRating, setSelectedRating] = useState<SelfProposedRatingValue | ''>('')
   const [isSubmitConfirmationOpen, setIsSubmitConfirmationOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -355,6 +363,7 @@ function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; r
   }, [refetchPeriodResult, refreshVersion])
 
   const result = periodResultQuery.data
+  const isLocked = isPeriodLocked || result?.status === 'LOCKED'
   const isSubmitted = result?.status === 'SUBMITTED'
   const isDraft = result?.status === 'DRAFT'
   const hasSavedRating = Boolean(
@@ -366,7 +375,7 @@ function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; r
   const apiError = mutationError instanceof Error ? mutationError.message : ''
 
   const handleSaveProposal = async () => {
-    if (!selectedRating || isSavingProposal || !isDraft) {
+    if (!selectedRating || isLocked || isSavingProposal || !isDraft) {
       if (!selectedRating) setLocalError('Vui lòng chọn mức xếp loại tự đề xuất.')
       return
     }
@@ -385,7 +394,7 @@ function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; r
   }
 
   const handleSubmitResult = async () => {
-    if (isSubmitting || !isDraft) return
+    if (isLocked || isSubmitting || !isDraft) return
 
     setStatusMessage('')
     setLocalError('')
@@ -428,7 +437,7 @@ function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; r
           <h2 id="period-result-title" className="text-lg font-semibold text-[var(--color-text-strong)]">Kết quả tự đánh giá</h2>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">Điểm tổng hợp được tính từ dữ liệu đã lưu của kỳ {result.periodName}.</p>
         </div>
-        {isSubmitted ? <Badge variant="success">Đã gửi</Badge> : <Badge variant="neutral">Bản nháp</Badge>}
+        {isLocked ? <Badge variant="neutral">Đã khóa</Badge> : isSubmitted ? <Badge variant="success">Đã gửi</Badge> : <Badge variant="neutral">Bản nháp</Badge>}
       </div>
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-3">
@@ -459,19 +468,19 @@ function PeriodResultSection({ periodId, refreshVersion }: { periodId: string; r
                   setStatusMessage('')
                 }}
                 className={fieldClassName}
-                disabled={!isDraft || isSavingProposal}
+                disabled={isLocked || !isDraft || isSavingProposal}
               >
                 <option value="">Chọn mức xếp loại</option>
                 {Object.values(SelfProposedRating).map((rating) => <option key={rating} value={rating}>{selfProposedRatingLabels[rating]}</option>)}
               </select>
             </label>
-            <Button type="button" variant="secondary" onClick={() => void handleSaveProposal()} disabled={!isDraft || !selectedRating || isSavingProposal}>
+            <Button type="button" variant="secondary" onClick={() => void handleSaveProposal()} disabled={isLocked || !isDraft || !selectedRating || isSavingProposal}>
               {isSavingProposal ? 'Đang lưu...' : 'Lưu mức đề xuất'}
             </Button>
           </div>
         )}
 
-        {isDraft ? <div className="flex justify-end"><Button type="button" onClick={() => setIsSubmitConfirmationOpen(true)} disabled={!hasSavedRating || isSavingProposal || isSubmitting}>Gửi bản tự đánh giá</Button></div> : null}
+        {isDraft && !isLocked ? <div className="flex justify-end"><Button type="button" onClick={() => setIsSubmitConfirmationOpen(true)} disabled={!hasSavedRating || isSavingProposal || isSubmitting}>Gửi bản tự đánh giá</Button></div> : null}
         {statusMessage ? <p role="status" className="rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-3 py-2 text-sm font-medium text-[var(--color-success)]">{statusMessage}</p> : null}
         {localError || apiError ? <p role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm font-medium text-[var(--color-danger)]">{localError || apiError}</p> : null}
       </Card>
@@ -540,12 +549,14 @@ function CriterionGroup({
   errors,
   onMetChange,
   onItemChange,
+  readOnly = false,
 }: {
   criterion: SelfEvaluationCriterion
   formState: Record<string, ItemFormState>
   errors: ItemErrors
   onMetChange: (criterionId: string, isMet: boolean) => void
   onItemChange: (criterionId: string, nextState: Partial<ItemFormState>) => void
+  readOnly?: boolean
 }) {
   if (isItem(criterion)) {
     return (
@@ -555,6 +566,7 @@ function CriterionGroup({
         error={errors[criterion.id]}
         onMetChange={onMetChange}
         onItemChange={onItemChange}
+        readOnly={readOnly}
       />
     )
   }
@@ -583,6 +595,7 @@ function CriterionGroup({
             errors={errors}
             onMetChange={onMetChange}
             onItemChange={onItemChange}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -596,12 +609,14 @@ function CriterionItem({
   error,
   onMetChange,
   onItemChange,
+  readOnly = false,
 }: {
   criterion: SelfEvaluationCriterion
   state?: ItemFormState
   error?: string
   onMetChange: (criterionId: string, isMet: boolean) => void
   onItemChange: (criterionId: string, nextState: Partial<ItemFormState>) => void
+  readOnly?: boolean
 }) {
   const isMet = state?.isMet ?? true
   const score = state?.selfScore ?? 0
@@ -631,12 +646,14 @@ function CriterionItem({
               checked={isMet}
               label="Đảm bảo"
               onChange={() => onMetChange(criterion.id, true)}
+              disabled={readOnly}
             />
             <EvaluationChoice
               name={`criterion-${criterion.id}-met`}
               checked={!isMet}
               label="Không đảm bảo"
               onChange={() => onMetChange(criterion.id, false)}
+              disabled={readOnly}
             />
           </div>
         </fieldset>
@@ -658,7 +675,7 @@ function CriterionItem({
                 })
               }
               className={fieldClassName}
-              disabled={!isMet}
+              disabled={readOnly || !isMet}
               aria-invalid={Boolean(error)}
             />
             {error ? (
@@ -676,6 +693,7 @@ function CriterionItem({
                 })
               }
               className={textAreaClassName}
+              disabled={readOnly}
               placeholder="Nhập ghi chú nếu cần..."
             />
           </label>
@@ -690,11 +708,13 @@ function EvaluationChoice({
   checked,
   label,
   onChange,
+  disabled = false,
 }: {
   name: string
   checked: boolean
   label: string
   onChange: () => void
+  disabled?: boolean
 }) {
   return (
     <label className={`flex min-w-0 items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-sm font-medium transition-colors ${checked ? 'border-[var(--color-primary)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)]' : 'border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-subtle)]'}`}>
@@ -703,6 +723,7 @@ function EvaluationChoice({
         name={name}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
         className="h-4 w-4 shrink-0 accent-[var(--color-primary)]"
       />
       <span>{label}</span>

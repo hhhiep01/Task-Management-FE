@@ -23,6 +23,8 @@ type DataTableProps<TItem> = {
   loadingMessage?: ReactNode
   errorMessage?: ReactNode
   emptyMessage?: ReactNode
+  emptyContent?: ReactNode
+  footer?: ReactNode
   minWidthClassName?: string
   toolbar?: ReactNode
   rowClassName?: string | ((item: TItem) => string)
@@ -39,6 +41,8 @@ export function DataTable<TItem>({
   loadingMessage = 'Đang tải dữ liệu...',
   errorMessage = 'Không tải được dữ liệu.',
   emptyMessage = 'Chưa có dữ liệu.',
+  emptyContent,
+  footer,
   minWidthClassName = 'min-w-[720px]',
   toolbar,
   rowClassName,
@@ -96,8 +100,9 @@ export function DataTable<TItem>({
           </table>
         </div>
       ) : (
-        <p className="px-4 py-6 text-sm text-[var(--color-text-muted)]">{emptyMessage}</p>
+        emptyContent ?? <p className="px-4 py-6 text-sm text-[var(--color-text-muted)]">{emptyMessage}</p>
       )}
+      {footer}
     </Card>
   )
 }

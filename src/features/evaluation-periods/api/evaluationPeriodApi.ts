@@ -15,6 +15,7 @@ export const evaluationPeriodApiLinks = {
   detail: (periodId: string) => `/api/EvaluationPeriod/${periodId}`,
   update: (periodId: string) => `/api/EvaluationPeriod/${periodId}`,
   delete: (periodId: string) => `/api/EvaluationPeriod/${periodId}`,
+  lock: (periodId: string) => `/api/EvaluationPeriod/${periodId}/lock`,
 }
 
 export type EvaluationPeriodQuery = PaginationQuery & {
@@ -30,6 +31,7 @@ export type GetEvaluationPeriodByIdResponse = ApiResponse<EvaluationPeriod>
 export type CreateEvaluationPeriodResponse = ApiResponse<EvaluationPeriod>
 export type UpdateEvaluationPeriodResponse = ApiResponse<EvaluationPeriod>
 export type DeleteEvaluationPeriodResponse = ApiResponse<null>
+export type LockEvaluationPeriodResponse = ApiResponse<EvaluationPeriod>
 
 export async function getEvaluationPeriods(query: EvaluationPeriodQuery, signal?: AbortSignal) {
   const response = await httpClient.get<GetEvaluationPeriodsResponse>(
@@ -70,6 +72,13 @@ export async function updateEvaluationPeriod(
 export async function deleteEvaluationPeriod(periodId: string): Promise<null> {
   const response = await httpClient.delete<DeleteEvaluationPeriodResponse>(
     evaluationPeriodApiLinks.delete(periodId),
+  )
+  return unwrapApiResponse(response.data)
+}
+
+export async function lockEvaluationPeriod(periodId: string): Promise<EvaluationPeriod> {
+  const response = await httpClient.post<LockEvaluationPeriodResponse>(
+    evaluationPeriodApiLinks.lock(periodId),
   )
   return unwrapApiResponse(response.data)
 }

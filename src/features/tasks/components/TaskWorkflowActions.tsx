@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { PeriodStatus } from '@/features/evaluation-periods/types/evaluationPeriod.types'
 
 import type { TaskWorkflowAction } from '../api/taskApi'
 import { useTaskEvidences } from '../hooks/useTaskEvidences'
@@ -52,24 +53,26 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
   const isAssignee = isSameUser(user?.id, task.assignee?.id ?? task.assigneeId)
   const isAssigner = isSameUser(user?.id, task.assigner?.id)
   const isManagerEvaluator = user?.role === 'manager' && ['TP', 'PP'].includes(user.roleCode.toUpperCase())
+  const isPeriodLocked = task.period?.status === PeriodStatus.LOCKED
   const isClosed =
     task.status === WorkTaskStatus.COMPLETED || task.status === WorkTaskStatus.CANCELLED
-  const hasResult = Boolean(task.resultDescription?.trim() || resultSuccess && resultDescription.trim())
+  const hasCurrentResult = Boolean(resultDescription.trim())
   const hasUnsavedResult =
     progressPercent !== (task.progressPercent ?? 0) ||
     resultDescription.trim() !== (task.resultDescription ?? '').trim()
   const evidenceRequired = Boolean(task.workTemplate?.evidenceRequirement?.trim())
   const hasEvidence = Boolean(evidencesQuery.data?.length)
   const evidenceReady = !evidenceRequired || hasEvidence
-  const canSubmitSavedResult = hasResult && (!hasUnsavedResult || Boolean(resultSuccess)) && evidenceReady
-  const canStart = isAssignee && task.status === WorkTaskStatus.NEW
+  const canSubmitReady = hasCurrentResult && evidenceReady
+  const canStart = !isPeriodLocked && isAssignee && task.status === WorkTaskStatus.NEW
   const canSubmit =
+    !isPeriodLocked &&
     isAssignee &&
     (task.status === WorkTaskStatus.IN_PROGRESS ||
       task.status === WorkTaskStatus.REVISION_REQUIRED)
   const canEditResult = canSubmit
-  const canEvaluate = isManagerEvaluator && task.status === WorkTaskStatus.WAITING_EVALUATION
-  const canCancel = isAssigner && !isClosed
+  const canEvaluate = !isPeriodLocked && isManagerEvaluator && task.status === WorkTaskStatus.WAITING_EVALUATION
+  const canCancel = !isPeriodLocked && isAssigner && !isClosed
   const isWaitingAssignee = isAssignee && task.status === WorkTaskStatus.WAITING_EVALUATION
   const hasActions = canStart || canEditResult || canSubmit || canEvaluate || canCancel
   const hasVisibleState = compact ? hasActions : true
@@ -84,14 +87,13 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
     }
   }
 
-  const saveResult = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const persistResult = async () => {
     const normalizedProgress = Math.min(100, Math.max(0, Number(progressPercent)))
     const normalizedDescription = resultDescription.trim()
 
     if (!normalizedDescription) {
       setResultError('Vui lòng nhập kết quả công việc trước khi lưu.')
-      return
+      return false
     }
 
     setResultError('')
@@ -107,9 +109,24 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
       setProgressPercent(normalizedProgress)
       setResultDescription(normalizedDescription)
       setResultSuccess('Đã cập nhật tiến độ và kết quả.')
+      return true
     } catch {
       // React Query exposes the backend error in the result editor.
+      return false
     }
+  }
+
+  const saveResult = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    await persistResult()
+  }
+
+  const submitResult = async () => {
+    if (!hasCurrentResult || !evidenceReady || isPending) return
+
+    setResultError('')
+    if (hasUnsavedResult && !(await persistResult())) return
+    await execute('submit')
   }
 
   const changeProgress = (value: number) => {
@@ -125,7 +142,7 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
   if (!hasVisibleState) return null
 
   const controls = (
-    <div className={`flex gap-2 ${compact ? 'flex-wrap justify-end' : 'flex-col sm:flex-row sm:flex-wrap'}`}>
+    <div className={`flex gap-2 ${compact ? 'flex-wrap justify-end' : 'flex-wrap justify-end'}`}>
       {canStart ? (
         <Button size="sm" disabled={isPending} onClick={() => void execute('start')}>
           {isPending ? 'Đang xử lý...' : 'Bắt đầu'}
@@ -144,13 +161,13 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
       {canSubmit ? (
         <Button
           size="sm"
-          disabled={isPending || !canSubmitSavedResult}
-          onClick={() => void execute('submit')}
+          disabled={isPending || !canSubmitReady}
+          onClick={() => void submitResult()}
           title={
             !evidenceReady
               ? 'Cần thêm minh chứng trước khi nộp kết quả'
-              : !canSubmitSavedResult
-                ? 'Cần cập nhật tiến độ mới nhất trước khi nộp kết quả'
+              : !hasCurrentResult
+                ? 'Cần nhập kết quả trước khi nộp'
                 : undefined
           }
         >
@@ -203,11 +220,12 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
           {evaluationSuccess ? <p className="text-xs font-medium text-[var(--color-success)]" role="status">{evaluationSuccess}</p> : null}
         </div>
       ) : (
-        <Card variant="muted" className="grid gap-3 p-4">
+        <>
+        <Card variant="flat" className="grid gap-3 p-4 sm:p-5">
           <div>
             <h2 className="text-base font-semibold text-[var(--color-text-strong)]">Kết quả thực hiện</h2>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              Cập nhật tiến độ, kết quả và thực hiện bước tiếp theo của công việc.
+              Cập nhật tiến độ và kết quả trước khi chuyển sang bước tiếp theo.
             </p>
           </div>
           {task.status === WorkTaskStatus.REVISION_REQUIRED ? (
@@ -237,25 +255,41 @@ export function TaskWorkflowActions({ task, compact = false }: TaskWorkflowActio
           {!canEditResult ? (
             <ReadOnlyResult task={task} />
           ) : null}
-          {canSubmit && evidenceRequired && !hasEvidence ? (
-            <p className="rounded-[var(--radius-md)] border border-amber-200 bg-[var(--color-warning-soft)] px-3 py-2 text-sm font-medium text-[var(--color-warning)]">
-              Hãy thêm ít nhất một minh chứng theo yêu cầu trước khi nộp kết quả.
-            </p>
-          ) : null}
-          {canSubmit && !canSubmitSavedResult ? (
-            <p className="text-sm text-[var(--color-danger)]">
-              Hãy cập nhật tiến độ và kết quả mới nhất trước khi gửi đánh giá.
-            </p>
-          ) : null}
-          {controls}
-          {cancelControl}
-          {workflowMutation.error instanceof Error ? (
-            <p className="text-sm font-medium text-[var(--color-danger)]" role="alert">
-              {workflowMutation.error.message}
-            </p>
-          ) : null}
-          {evaluationSuccess ? <p className="text-sm font-medium text-[var(--color-success)]" role="status">{evaluationSuccess}</p> : null}
         </Card>
+
+        {canStart || canSubmit || canEvaluate || canCancel || workflowMutation.error || evaluationSuccess ? (
+          <Card variant="flat" className="grid gap-3 border-l-4 border-l-[var(--color-primary)] p-4 sm:p-5">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--color-text-strong)]">
+                {canSubmit ? 'Nộp kết quả' : canEvaluate ? 'Đánh giá công việc' : 'Bước tiếp theo'}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                {canSubmit
+                  ? 'Kiểm tra lại kết quả và minh chứng trước khi gửi cho người giao việc đánh giá.'
+                  : 'Chọn hành động phù hợp để tiếp tục quy trình công việc.'}
+              </p>
+            </div>
+            {canSubmit && evidenceRequired && !hasEvidence && !evidencesQuery.isLoading ? (
+              <p className="rounded-[var(--radius-md)] border border-amber-200 bg-[var(--color-warning-soft)] px-3 py-2 text-sm font-medium text-[var(--color-warning)]" role="status">
+                Hãy thêm ít nhất một minh chứng ở phần Minh chứng trước khi nộp kết quả.
+              </p>
+            ) : null}
+          {canSubmit && !hasCurrentResult ? (
+            <p className="text-sm text-[var(--color-danger)]" role="status">
+              Hãy nhập kết quả công việc trước khi nộp.
+            </p>
+            ) : null}
+            {controls}
+            {cancelControl}
+            {workflowMutation.error instanceof Error ? (
+              <p className="text-sm font-medium text-[var(--color-danger)]" role="alert">
+                {workflowMutation.error.message}
+              </p>
+            ) : null}
+            {evaluationSuccess ? <p className="text-sm font-medium text-[var(--color-success)]" role="status">{evaluationSuccess}</p> : null}
+          </Card>
+        ) : null}
+        </>
       )}
 
       <Modal
@@ -367,7 +401,7 @@ function ResultEditor({
       {error ? <p className="text-sm font-medium text-[var(--color-danger)]" role="alert">{error}</p> : null}
       {success ? <p className="text-sm font-medium text-[var(--color-success)]" role="status">{success}</p> : null}
 
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-end">
         {onCancel ? <Button variant="secondary" disabled={isPending} onClick={onCancel}>Quay lại</Button> : null}
         <Button type="submit" variant={submitVariant} disabled={isPending}>
           {isPending ? 'Đang lưu...' : submitLabel}

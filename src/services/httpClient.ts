@@ -6,11 +6,13 @@ import type { ApiResponse } from '@/types/api'
 
 export class ApiClientError extends Error {
   readonly status?: number
+  readonly responseData?: unknown
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, responseData?: unknown) {
     super(message)
     this.name = 'ApiClientError'
     this.status = status
+    this.responseData = responseData
   }
 }
 
@@ -49,6 +51,6 @@ httpClient.interceptors.response.use(
     }
 
     const message = error.response?.data?.errorMessage || error.message
-    return Promise.reject(new ApiClientError(message, error.response?.status))
+    return Promise.reject(new ApiClientError(message, error.response?.status, error.response?.data))
   },
 )

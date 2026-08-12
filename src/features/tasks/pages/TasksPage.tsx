@@ -31,6 +31,7 @@ import {
   type Task,
   type TaskFormPayload,
 } from '../types/task.types'
+import { getTaskStatusSecondaryText } from '../utils/taskPresentation'
 
 const initialForm: TaskFormPayload = {
   periodId: '',
@@ -87,6 +88,10 @@ function getWorkTypeValue(workType?: string | null) {
 
 function getProgress(task: Task) {
   return Math.min(100, Math.max(0, task.progressPercent ?? 0))
+}
+
+function isTaskPeriodLocked(task: Task) {
+  return task.period?.status === PeriodStatus.LOCKED
 }
 
 function isClosedTask(task: Task) {
@@ -206,12 +211,13 @@ function EmptyState({ title, description, action }: { title: string; description
 }
 
 function FieldError({ show, children }: { show: boolean; children: ReactNode }) {
-  if (!show) {
-    return null
-  }
-
   return (
-    <p className="min-w-0 break-words text-xs font-medium text-[var(--color-danger)]">
+    <p
+      className={`min-h-4 min-w-0 break-words text-xs font-medium leading-4 ${
+        show ? 'text-[var(--color-danger)]' : 'invisible'
+      }`}
+      aria-hidden={!show}
+    >
       {children}
     </p>
   )
@@ -235,7 +241,14 @@ function TaskMobileCard({ task, onView, onEdit, onDelete, isDeleting }: TaskMobi
           <h3 className="font-semibold text-[var(--color-text-strong)]">{task.title}</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{getTemplateName(task)}</p>
         </div>
-        <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+        <div className="grid justify-items-start gap-1">
+          <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+          {getTaskStatusSecondaryText(task) ? (
+            <span className="text-xs font-medium text-[var(--color-text-muted)]">
+              {getTaskStatusSecondaryText(task)}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -265,18 +278,10 @@ function TaskMobileCard({ task, onView, onEdit, onDelete, isDeleting }: TaskMobi
         <Button type="button" variant="ghost" size="sm" onClick={() => onView(task)}>
           Xem
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(task)}>
-          Sửa
-        </Button>
-        <Button
-          type="button"
-          variant="danger"
-          size="sm"
-          onClick={() => void onDelete(task)}
-          disabled={isDeleting}
-        >
-          Xóa
-        </Button>
+        {!isTaskPeriodLocked(task) ? <>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(task)}>Sửa</Button>
+          <Button type="button" variant="danger" size="sm" onClick={() => void onDelete(task)} disabled={isDeleting}>Xóa</Button>
+        </> : null}
       </div>
     </Card>
   )
@@ -500,7 +505,14 @@ export function TasksPage() {
       header: 'Trạng thái',
       className: 'whitespace-nowrap',
       render: (task) => (
-        <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+        <div className="grid justify-items-start gap-1">
+          <Badge variant={getStatusVariant(task)}>{getTaskStatusLabel(task.status)}</Badge>
+          {getTaskStatusSecondaryText(task) ? (
+            <span className="text-xs font-medium text-[var(--color-text-muted)]">
+              {getTaskStatusSecondaryText(task)}
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -514,18 +526,10 @@ export function TasksPage() {
           <Button type="button" variant="ghost" size="sm" onClick={() => openDetailPage(task)}>
             Xem
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => openEditModal(task)}>
-            Sửa
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            size="sm"
-            onClick={() => void handleDelete(task)}
-            disabled={deleteTaskMutation.isPending}
-          >
-            Xóa
-          </Button>
+          {!isTaskPeriodLocked(task) ? <>
+            <Button type="button" variant="secondary" size="sm" onClick={() => openEditModal(task)}>Sửa</Button>
+            <Button type="button" variant="danger" size="sm" onClick={() => void handleDelete(task)} disabled={deleteTaskMutation.isPending}>Xóa</Button>
+          </> : null}
         </div>
       ),
     },

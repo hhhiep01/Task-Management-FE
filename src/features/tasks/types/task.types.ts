@@ -16,7 +16,7 @@ export type WorkTaskStatus = (typeof WorkTaskStatus)[keyof typeof WorkTaskStatus
 export type TaskStatus = WorkTaskStatus | string
 
 export const taskStatusLabels: Record<WorkTaskStatus, string> = {
-  [WorkTaskStatus.NEW]: 'Mới',
+  [WorkTaskStatus.NEW]: 'Mới giao',
   [WorkTaskStatus.IN_PROGRESS]: 'Đang thực hiện',
   [WorkTaskStatus.WAITING_EVALUATION]: 'Chờ đánh giá',
   [WorkTaskStatus.REVISION_REQUIRED]: 'Cần chỉnh sửa',
@@ -56,6 +56,9 @@ export type Task = {
   assignedDate?: string | null
   dueDate?: string | null
   completedDate?: string | null
+  submittedDate?: string | null
+  submittedAt?: string | null
+  resultSubmittedAt?: string | null
   baseScore?: number
   difficultyPercent?: number
   progressPercent?: number

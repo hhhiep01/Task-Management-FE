@@ -5,9 +5,10 @@ import type { UserRole } from '../types/auth.types'
 
 type ProtectedRouteProps = {
   allowedRoles?: UserRole[]
+  allowedRoleCodes?: string[]
 }
 
-export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ allowedRoles, allowedRoleCodes }: ProtectedRouteProps) {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
 
@@ -16,6 +17,13 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role ?? 'guest')) {
+    return <Navigate to="/unauthorized" replace />
+  }
+
+  if (
+    allowedRoleCodes &&
+    !allowedRoleCodes.includes(user?.roleCode?.toUpperCase() ?? '')
+  ) {
     return <Navigate to="/unauthorized" replace />
   }
 

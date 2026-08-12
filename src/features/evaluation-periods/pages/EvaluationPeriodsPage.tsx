@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
 import { env } from '@/config/env'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOrganizations } from '@/features/organizations/hooks/useOrganizations'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { usePagedListState } from '@/hooks/usePagedListState'
@@ -14,6 +17,7 @@ import {
   useCreateEvaluationPeriod,
   useDeleteEvaluationPeriod,
   useEvaluationPeriods,
+  useLockEvaluationPeriod,
   useUpdateEvaluationPeriod,
 } from '../hooks/useEvaluationPeriods'
 import {
@@ -34,6 +38,15 @@ const periodStatusLabels: Record<PeriodStatus, string> = {
   [PeriodStatus.DRAFT]: 'Nháp',
   [PeriodStatus.ACTIVE]: 'Đang hoạt động',
   [PeriodStatus.CLOSED]: 'Đã đóng',
+  [PeriodStatus.EVALUATING]: 'Đang đánh giá',
+  [PeriodStatus.LOCKED]: 'Đã khóa',
+}
+
+function getPeriodStatusVariant(status: PeriodStatus) {
+  if (status === PeriodStatus.LOCKED) return 'neutral' as const
+  if (status === PeriodStatus.EVALUATING) return 'warning' as const
+  if (status === PeriodStatus.ACTIVE) return 'success' as const
+  return 'neutral' as const
 }
 
 const initialForm: EvaluationPeriodPayload = {
@@ -54,6 +67,9 @@ export function EvaluationPeriodsPage() {
   const [editingPeriod, setEditingPeriod] = useState<EvaluationPeriod | null>(null)
   const [formError, setFormError] = useState('')
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false)
+  const [periodToLock, setPeriodToLock] = useState<EvaluationPeriod | null>(null)
+  const [lockSuccess, setLockSuccess] = useState('')
+  const { user } = useAuth()
 
   const listState = usePagedListState(filterKeys)
   const periodsQuery = useEvaluationPeriods(listState.query)
@@ -61,6 +77,7 @@ export function EvaluationPeriodsPage() {
   const createPeriodMutation = useCreateEvaluationPeriod()
   const updatePeriodMutation = useUpdateEvaluationPeriod()
   const deletePeriodMutation = useDeleteEvaluationPeriod()
+  const lockPeriodMutation = useLockEvaluationPeriod()
 
   const isSubmitting = createPeriodMutation.isPending || updatePeriodMutation.isPending
   const modalTitle = editingPeriod ? 'Cập nhật kỳ đánh giá' : 'Tạo kỳ đánh giá'
@@ -70,6 +87,8 @@ export function EvaluationPeriodsPage() {
   }, [createPeriodMutation.error, updatePeriodMutation.error])
   const deleteError =
     deletePeriodMutation.error instanceof Error ? deletePeriodMutation.error.message : ''
+  const lockError = lockPeriodMutation.error instanceof Error ? lockPeriodMutation.error.message : ''
+  const canLockPeriods = ['ADMIN', 'TP'].includes(user?.roleCode?.toUpperCase() ?? '')
 
   const closeModal = () => {
     setForm(initialForm)
@@ -136,10 +155,24 @@ export function EvaluationPeriodsPage() {
   }
 
   const handleStatusChange = async (period: EvaluationPeriod, status: PeriodStatus) => {
+    if (period.status === PeriodStatus.LOCKED) return
     await updatePeriodMutation.mutateAsync({
       periodId: period.id,
       payload: toEvaluationPeriodPayload(period, { status }),
     })
+  }
+
+  const handleLock = async () => {
+    if (!periodToLock || periodToLock.status !== PeriodStatus.EVALUATING || lockPeriodMutation.isPending) return
+
+    try {
+      await lockPeriodMutation.mutateAsync(periodToLock.id)
+      setPeriodToLock(null)
+      setLockSuccess('Khóa kỳ đánh giá thành công.')
+      window.setTimeout(() => setLockSuccess(''), 4500)
+    } catch {
+      // The backend error is rendered in the confirmation dialog.
+    }
   }
 
   return (
@@ -155,10 +188,16 @@ export function EvaluationPeriodsPage() {
           </p>
         </div>
 
-        <Button type="button" onClick={openCreateModal}>
-          Tạo kỳ đánh giá
-        </Button>
+      <Button type="button" onClick={openCreateModal}>
+        Tạo kỳ đánh giá
+      </Button>
       </div>
+
+      {lockSuccess ? (
+        <p className="mt-4 rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-4 py-3 text-sm font-medium text-[var(--color-success)]" role="status">
+          {lockSuccess}
+        </p>
+      ) : null}
 
       <Card className="mt-6 overflow-hidden">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
@@ -216,48 +255,46 @@ export function EvaluationPeriodsPage() {
                     <td className="px-5 py-4 text-slate-600">{formatDate(period.startDate)}</td>
                     <td className="px-5 py-4 text-slate-600">{formatDate(period.endDate)}</td>
                     <td className="px-5 py-4 text-slate-600">
-                      <select
-                        value={period.status}
-                        onChange={(event) =>
-                          void handleStatusChange(
-                            period,
-                            event.target.value as PeriodStatus,
-                          )
-                        }
-                        disabled={updatePeriodMutation.isPending}
-                        className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100 disabled:opacity-60"
-                      >
-                        <option value={PeriodStatus.DRAFT}>
-                          {periodStatusLabels[PeriodStatus.DRAFT]}
-                        </option>
-                        <option value={PeriodStatus.ACTIVE}>
-                          {periodStatusLabels[PeriodStatus.ACTIVE]}
-                        </option>
-                        <option value={PeriodStatus.CLOSED}>
-                          {periodStatusLabels[PeriodStatus.CLOSED]}
-                        </option>
-                      </select>
+                      {period.status === PeriodStatus.EVALUATING || period.status === PeriodStatus.LOCKED ? (
+                        <Badge variant={getPeriodStatusVariant(period.status)}>
+                          {periodStatusLabels[period.status]}
+                        </Badge>
+                      ) : (
+                        <select
+                          value={period.status}
+                          onChange={(event) =>
+                            void handleStatusChange(period, event.target.value as PeriodStatus)
+                          }
+                          disabled={updatePeriodMutation.isPending}
+                          className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100 disabled:opacity-60"
+                        >
+                          <option value={PeriodStatus.DRAFT}>{periodStatusLabels[PeriodStatus.DRAFT]}</option>
+                          <option value={PeriodStatus.ACTIVE}>{periodStatusLabels[PeriodStatus.ACTIVE]}</option>
+                          <option value={PeriodStatus.CLOSED}>{periodStatusLabels[PeriodStatus.CLOSED]}</option>
+                        </select>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-slate-600">
                       {formatDate(period.createdDate)}
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(period)}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(period)}
-                          disabled={deletePeriodMutation.isPending}
-                          className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-                        >
-                          Xóa
-                        </button>
+                        {period.status !== PeriodStatus.LOCKED ? (
+                          <>
+                            <button type="button" onClick={() => openEditModal(period)} className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                              Sửa
+                            </button>
+                            <button type="button" onClick={() => void handleDelete(period)} disabled={deletePeriodMutation.isPending} className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60">
+                              Xóa
+                            </button>
+                          </>
+                        ) : null}
+                        {canLockPeriods && period.status === PeriodStatus.EVALUATING ? (
+                          <button type="button" onClick={() => { lockPeriodMutation.reset(); setPeriodToLock(period) }} disabled={lockPeriodMutation.isPending} className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60" title="Khóa kỳ đánh giá">
+                            <LockIcon />
+                            Khóa kỳ
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -279,6 +316,39 @@ export function EvaluationPeriodsPage() {
         )}
         {periodsQuery.data ? <Pagination {...periodsQuery.data} onPageChange={listState.setPageNumber} onPageSizeChange={listState.setPageSize} disabled={periodsQuery.isFetching} /> : null}
       </Card>
+
+      <Modal
+        open={Boolean(periodToLock)}
+        onClose={() => !lockPeriodMutation.isPending && setPeriodToLock(null)}
+        title="Khóa kỳ đánh giá?"
+        description="Sau khi khóa, toàn bộ dữ liệu công việc và đánh giá thuộc kỳ này sẽ chuyển sang chế độ chỉ xem và không thể chỉnh sửa."
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setPeriodToLock(null)} disabled={lockPeriodMutation.isPending}>
+              Hủy
+            </Button>
+            <Button type="button" variant="danger" onClick={() => void handleLock()} disabled={lockPeriodMutation.isPending}>
+              <LockIcon />
+              {lockPeriodMutation.isPending ? 'Đang khóa...' : 'Khóa kỳ đánh giá'}
+            </Button>
+          </>
+        }
+      >
+        {periodToLock ? (
+          <div className="grid gap-3 text-sm">
+            <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Kỳ đánh giá</p>
+              <p className="mt-1 font-semibold text-[var(--color-text-strong)]">{periodToLock.name}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[var(--color-text-muted)]">Trạng thái:</span>
+              <Badge variant="warning">{periodStatusLabels[PeriodStatus.EVALUATING]}</Badge>
+            </div>
+            {lockError ? <p className="rounded-[var(--radius-md)] bg-[var(--color-danger-soft)] px-3 py-2.5 text-sm text-[var(--color-danger)]" role="alert">{lockError}</p> : null}
+          </div>
+        ) : null}
+      </Modal>
 
       {isPeriodModalOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4 py-6">
@@ -428,5 +498,14 @@ function FilterInput({ label, value, onChange, placeholder, type = 'text' }: { l
 
 function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
   return <label className="grid gap-1.5"><span className="text-sm font-medium text-slate-700">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"><option value="">Tất cả</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+}
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0">
+      <rect x="4" y="8" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
 }
 

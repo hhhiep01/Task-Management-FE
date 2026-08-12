@@ -4,6 +4,8 @@ import {
   createEvaluationPeriod,
   deleteEvaluationPeriod,
   getEvaluationPeriods,
+  getEvaluationPeriodById,
+  lockEvaluationPeriod,
   updateEvaluationPeriod,
 } from '../api/evaluationPeriodApi'
 import type { EvaluationPeriodQuery } from '../api/evaluationPeriodApi'
@@ -54,6 +56,25 @@ export function useDeleteEvaluationPeriod() {
 
   return useMutation({
     mutationFn: deleteEvaluationPeriod,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: evaluationPeriodQueryKeys.all })
+    },
+  })
+}
+
+export function useEvaluationPeriod(periodId: string) {
+  return useQuery({
+    queryKey: [...evaluationPeriodQueryKeys.all, 'detail', periodId],
+    queryFn: () => getEvaluationPeriodById(periodId),
+    enabled: Boolean(periodId),
+  })
+}
+
+export function useLockEvaluationPeriod() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: lockEvaluationPeriod,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: evaluationPeriodQueryKeys.all })
     },

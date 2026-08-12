@@ -2,6 +2,8 @@ export type Organization = {
   id: string
   code: string
   name: string
+  parentId: string | null
+  parentName: string | null
   createdDate: string
   modifiedDate: string | null
 }
@@ -9,6 +11,7 @@ export type Organization = {
 export type OrganizationPayload = {
   code: string
   name: string
+  parentId: string | null
 }
 
 export type CreateOrganizationRequest = OrganizationPayload
