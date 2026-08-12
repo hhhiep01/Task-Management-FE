@@ -47,6 +47,11 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['admin', 'employee', 'manager']} />}>
         <Route element={<AppLayout />}>
           <Route index element={<RoleRedirect />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoleCodes={['ADMIN', 'TP', 'PP']} />}>
+        <Route element={<AppLayout />}>
           <Route path="/common-criteria" element={<CommonCriteriaPage />} />
         </Route>
       </Route>

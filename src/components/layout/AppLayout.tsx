@@ -102,7 +102,13 @@ const managerSections: SidebarSection[] = [
       { label: 'Kỳ đánh giá', href: '/manager/evaluation-periods', icon: 'calendar', roles: ['manager'] },
       { label: 'Nhóm công việc', href: '/manager/work-categories', icon: 'folder', roles: ['manager'] },
       { label: 'Danh mục công việc', href: '/manager/work-templates', icon: 'list', roles: ['manager'] },
-      { label: 'Tiêu chí chung', href: '/common-criteria', icon: 'settings', roles: ['manager'] },
+      {
+        label: 'Tiêu chí chung',
+        href: '/common-criteria',
+        icon: 'settings',
+        roles: ['manager'],
+        roleCodes: ['TP', 'PP'],
+      },
     ],
   },
 ]
