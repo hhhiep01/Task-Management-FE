@@ -264,7 +264,7 @@ export function UserAccountsPage() {
         </p>
       ) : null}
 
-      <Card className="mt-6 overflow-hidden">
+      <Card className="mt-6">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-slate-950">Danh sách tài khoản</h2>
           {accountsQuery.data ? (
@@ -274,8 +274,8 @@ export function UserAccountsPage() {
           ) : null}
         </div>
 
-        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_220px_220px_auto]">
-          <label className="grid gap-1.5">
+        <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_14rem_18rem_auto] xl:items-end">
+          <label className="grid min-w-0 gap-1.5">
             <span className="text-sm font-medium text-slate-700">Tìm kiếm</span>
             <input
               value={listState.searchInput}
@@ -284,7 +284,7 @@ export function UserAccountsPage() {
               placeholder="Họ tên hoặc email"
             />
           </label>
-          <label className="grid gap-1.5">
+          <label className="grid min-w-0 gap-1.5">
             <span className="text-sm font-medium text-slate-700">Vai trò</span>
             <select
               value={listState.filters.roleId}
@@ -292,10 +292,14 @@ export function UserAccountsPage() {
               className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-100"
             >
               <option value="">Tất cả</option>
-              {rolesQuery.data?.items.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+              {rolesQuery.data?.items.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {getRoleLabel(role)}
+                </option>
+              ))}
             </select>
           </label>
-          <label className="grid gap-1.5">
+          <label className="grid min-w-0 gap-1.5">
             <span className="text-sm font-medium text-slate-700">Phòng ban</span>
             <select
               value={listState.filters.organizationId}
@@ -307,7 +311,13 @@ export function UserAccountsPage() {
             </select>
           </label>
           {listState.hasActiveFilters ? (
-            <Button variant="secondary" className="self-end" onClick={listState.clearFilters}>Xóa bộ lọc</Button>
+            <Button
+              variant="secondary"
+              className="self-end whitespace-nowrap"
+              onClick={listState.clearFilters}
+            >
+              Xóa bộ lọc
+            </Button>
           ) : null}
         </div>
 
@@ -324,71 +334,166 @@ export function UserAccountsPage() {
             {accountsQuery.error instanceof Error ? accountsQuery.error.message : 'Không tải được danh sách tài khoản.'}
           </p>
         ) : accountsQuery.data?.items.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Họ tên</th>
-                  <th className="px-5 py-3 font-semibold">Email</th>
-                  <th className="px-5 py-3 font-semibold">Vai trò</th>
-                  <th className="px-5 py-3 font-semibold">Phòng ban</th>
-                  <th className="px-5 py-3 font-semibold">Mật khẩu</th>
-                  <th className="px-5 py-3 font-semibold">Ngày tạo</th>
-                  <th className="px-5 py-3 text-right font-semibold">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {accountsQuery.data.items.map((account) => (
-                  <tr key={account.id} className="bg-white">
-                    <td className="px-5 py-4 font-semibold text-slate-950">
-                      {account.fullName}
-                    </td>
-                    <td className="px-5 py-4 text-slate-700">{account.email}</td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {account.role.name || account.role.code}
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {account.organization?.name ?? '-'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <PasswordStatusBadge account={account} />
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatDate(account.createdDate)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(account)}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                          Sửa
-                        </button>
-                        {canResetPassword ? (
-                          <button
-                            type="button"
-                            onClick={() => openResetPasswordModal(account)}
-                            className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700"
-                          >
-                            Đặt lại mật khẩu
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(account)}
-                          disabled={deleteAccountMutation.isPending}
-                          className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="hidden xl:block">
+              <table className="w-full table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[15%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                </colgroup>
+                <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="px-3 py-3 font-semibold">Họ tên</th>
+                    <th className="px-3 py-3 font-semibold">Email</th>
+                    <th className="whitespace-nowrap px-3 py-3 font-semibold">Vai trò</th>
+                    <th className="px-3 py-3 font-semibold">Phòng ban</th>
+                    <th className="whitespace-nowrap px-3 py-3 font-semibold">Mật khẩu</th>
+                    <th className="whitespace-nowrap px-3 py-3 font-semibold">Ngày tạo</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-semibold">Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {accountsQuery.data.items.map((account) => (
+                    <tr
+                      key={account.id}
+                      className="bg-white transition-colors hover:bg-slate-50/70"
+                    >
+                      <td className="px-3 py-3 align-middle font-semibold text-slate-950">
+                        <span className="block truncate" title={account.fullName}>
+                          {account.fullName}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-middle text-slate-700">
+                        <span className="block truncate" title={account.email}>
+                          {account.email}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 align-middle text-slate-700">
+                        {getRoleLabel(account.role)}
+                      </td>
+                      <td className="px-3 py-3 align-middle text-slate-600">
+                        <span
+                          className="block truncate"
+                          title={account.organization?.name ?? undefined}
+                        >
+                          {account.organization?.name ?? '-'}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 align-middle">
+                        <PasswordStatusBadge account={account} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 align-middle text-slate-600">
+                        {formatDate(account.createdDate)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 align-middle">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="px-2.5 whitespace-nowrap"
+                            onClick={() => openEditModal(account)}
+                          >
+                            Sửa
+                          </Button>
+                          <AccountActionMenu
+                            account={account}
+                            canResetPassword={canResetPassword}
+                            isDeleting={deleteAccountMutation.isPending}
+                            onResetPassword={openResetPasswordModal}
+                            onDelete={handleDelete}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid gap-3 p-4 xl:hidden">
+              {accountsQuery.data.items.map((account) => (
+                <article
+                  key={account.id}
+                  className="min-w-0 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3
+                        className="truncate font-semibold text-[var(--color-text-strong)]"
+                        title={account.fullName}
+                      >
+                        {account.fullName}
+                      </h3>
+                      <p
+                        className="mt-1 truncate text-sm text-[var(--color-text-muted)]"
+                        title={account.email}
+                      >
+                        {account.email}
+                      </p>
+                    </div>
+                    <AccountActionMenu
+                      account={account}
+                      canResetPassword={canResetPassword}
+                      isDeleting={deleteAccountMutation.isPending}
+                      onResetPassword={openResetPasswordModal}
+                      onDelete={handleDelete}
+                    />
+                  </div>
+
+                  <dl className="mt-4 grid min-w-0 gap-3 text-sm sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <dt className="text-xs font-medium uppercase text-[var(--color-text-muted)]">
+                        Vai trò
+                      </dt>
+                      <dd className="mt-1 whitespace-nowrap font-medium text-[var(--color-text-strong)]">
+                        {getRoleLabel(account.role)}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs font-medium uppercase text-[var(--color-text-muted)]">
+                        Phòng ban
+                      </dt>
+                      <dd className="mt-1 break-words text-[var(--color-text)]">
+                        {account.organization?.name ?? '-'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-[var(--color-text-muted)]">
+                        Mật khẩu
+                      </dt>
+                      <dd className="mt-1">
+                        <PasswordStatusBadge account={account} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-[var(--color-text-muted)]">
+                        Ngày tạo
+                      </dt>
+                      <dd className="mt-1 whitespace-nowrap text-[var(--color-text)]">
+                        {formatDate(account.createdDate)}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-4 w-full"
+                    onClick={() => openEditModal(account)}
+                  >
+                    Sửa tài khoản
+                  </Button>
+                </article>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="px-5 py-8 text-sm text-slate-600">
             {listState.hasActiveFilters ? 'Không có tài khoản phù hợp.' : 'Chưa có tài khoản nào.'}
@@ -485,7 +590,7 @@ export function UserAccountsPage() {
                   <option value="">Chọn vai trò</option>
                   {roleOptions.map((role) => (
                     <option key={role.id} value={role.id}>
-                      {role.name}
+                      {getRoleLabel(role)}
                     </option>
                   ))}
                 </select>
@@ -632,13 +737,98 @@ function getRoleText(value: Role[keyof Pick<Role, 'code' | 'name'>]) {
   return value.trim().toUpperCase()
 }
 
+const roleLabels: Record<string, string> = {
+  ADMIN: 'Quản trị viên',
+  ADMINISTRATOR: 'Quản trị viên',
+  TP: 'Trưởng phòng',
+  PP: 'Phó phòng',
+  NV: 'Nhân viên',
+}
+
+function getRoleLabel(role: Role) {
+  return roleLabels[getRoleText(role.code)] ?? role.name ?? role.code
+}
+
+function AccountActionMenu({
+  account,
+  canResetPassword,
+  isDeleting,
+  onResetPassword,
+  onDelete,
+}: {
+  account: UserAccount
+  canResetPassword: boolean
+  isDeleting: boolean
+  onResetPassword: (account: UserAccount) => void
+  onDelete: (account: UserAccount) => Promise<void>
+}) {
+  return (
+    <details className="group relative shrink-0">
+      <summary
+        className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-white text-[var(--color-text)] shadow-sm transition-colors hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] [&::-webkit-details-marker]:hidden"
+        aria-label={`Mở thao tác cho ${account.fullName}`}
+        title="Thao tác khác"
+      >
+        <MoreHorizontalIcon />
+      </summary>
+      <div className="absolute right-0 top-full z-30 mt-1.5 w-52 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-1.5 shadow-[var(--shadow-modal)]">
+        {canResetPassword ? (
+          <button
+            type="button"
+            className="flex h-9 w-full items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3 text-left text-sm font-medium text-[var(--color-text-strong)] transition-colors hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            onClick={(event) => {
+              event.currentTarget.closest('details')?.removeAttribute('open')
+              onResetPassword(account)
+            }}
+          >
+            Đặt lại mật khẩu
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="mt-0.5 flex h-9 w-full items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3 text-left text-sm font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={isDeleting}
+          onClick={(event) => {
+            event.currentTarget.closest('details')?.removeAttribute('open')
+            void onDelete(account)
+          }}
+        >
+          Xóa tài khoản
+        </button>
+      </div>
+    </details>
+  )
+}
+
+function MoreHorizontalIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 function PasswordStatusBadge({ account }: { account: UserAccount }) {
   if (account.mustChangePassword === undefined) {
     return <span className="text-sm text-slate-500">-</span>
   }
 
   return (
-    <Badge variant="neutral" title={account.mustChangePassword ? 'Yêu cầu đổi mật khẩu' : undefined}>
+    <Badge
+      variant={account.mustChangePassword ? 'warning' : 'success'}
+      className="whitespace-nowrap px-2 py-1"
+      title={account.mustChangePassword ? 'Yêu cầu đổi mật khẩu' : 'Mật khẩu đã được thay đổi'}
+    >
       {account.mustChangePassword ? 'Mật khẩu tạm' : 'Đã đổi mật khẩu'}
     </Badge>
   )
